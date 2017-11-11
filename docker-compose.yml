@@ -1,0 +1,39 @@
+version: '2.1'
+
+### Network Configuration #######################################
+
+services:
+
+### Database Container #######################################
+
+  social-api-db:
+    container_name: test-social-api-db
+    build: ./servers/mariadb
+    volumes:
+      - ./database/schema:/var/lib/mariadb
+    ports:
+      - "${DB_FORWARD_PORT}:3306"
+    environment:
+      MYSQL_DATABASE: social-api
+      MYSQL_USER: api
+      MYSQL_PASSWORD: api
+      MYSQL_ROOT_PASSWORD: root
+
+### Golang Based Services Container ################################
+
+  social-api:
+    container_name: test-social-api
+    environment:
+      APP_NAME: social-api
+    build:
+      context: ./servers/services/social-api
+      args:
+        - APP_NAME=social-api
+    volumes:
+      - .:/go/src/social-api
+    expose:
+      - "8080"
+    ports:
+      - "${API_FORWARD_PORT}:8080"
+    links:
+      - social-api-db

@@ -1,0 +1,13 @@
+# Development files
+.env
+.glide
+ vendor
+
+# OS or Editor folders
+.DS_Store
+Thumbs.db
+logs/
+files/*
+!files/.gitkeep
+/vendor/
+.idea/

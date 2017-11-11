@@ -1,0 +1,7 @@
+mode: set
+social-api\apps\api.go:7.38,9.2 2 1
+social-api\apps\api.go:9.2,10.39 1 1
+social-api\apps\api.go:10.39,12.4 1 1
+social-api\apps\apps.go:7.36,14.2 4 1
+social-api\apps\web.go:7.38,9.2 1 1
+social-api\apps\LandingController.go:7.30,9.2 1 1

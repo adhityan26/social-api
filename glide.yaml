@@ -1,0 +1,10 @@
+package: social-api
+ignore:
+- models
+- controllers
+import:
+- package: github.com/kataras/iris
+- package: github.com/joho/godotenv
+- package: github.com/iris-contrib/httpexpect
+- package: github.com/go-sql-driver/mysql
+- package: github.com/jinzhu/gorm
