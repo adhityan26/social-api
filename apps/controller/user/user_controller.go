@@ -20,16 +20,16 @@ func (this *Controller) Index(ctx iris.Context) {
 
 	query := this.DB
 
-	if len(userParam["Email"]) > 0 {
-		query = query.Where("email like ?", "%" + userParam["Email"] + "%")
+	if len(userParam["email"]) > 0 {
+		query = query.Where("email like ?", "%" + userParam["email"] + "%")
 	}
 
-	if len(userParam["Name"]) > 0 {
-		query = query.Where("name like ?", "%" + userParam["Name"] + "%")
+	if len(userParam["name"]) > 0 {
+		query = query.Where("name like ?", "%" + userParam["name"] + "%")
 	}
 
-	if len(userParam["Status"]) > 0 {
-		query = query.Where("status = ?", userParam["Status"])
+	if len(userParam["status"]) > 0 {
+		query = query.Where("status = ?", userParam["status"])
 	}
 	query.Find(&listUser)
 
@@ -72,7 +72,11 @@ func (this *Controller) Show(ctx iris.Context) {
 	userOutput.Id = user.Id
 	userOutput.Name = user.Name
 	userOutput.Email = user.Email
-	userOutput.Status = user.Status
+	if user.Status {
+		userOutput.Status = "true"
+	} else {
+		userOutput.Status = "false"
+	}
 	userOutput.CreatedAt = user.CreatedAt
 	userOutput.UpdatedAt = user.UpdatedAt
 
@@ -81,7 +85,10 @@ func (this *Controller) Show(ctx iris.Context) {
 
 func (this *Controller) Create(ctx iris.Context) {
 	var user models.User
-	ctx.ReadForm(&user)
+	var userParam models.UserOutput
+	ctx.ReadJSON(&userParam)
+	user.Name = userParam.Name
+	user.Email = userParam.Email
 	user.Status = true
 	user.UpdatedAt = time.Now()
 	user.CreatedAt = time.Now()
@@ -105,32 +112,32 @@ func (this *Controller) Create(ctx iris.Context) {
 			Email: user.Email,
 		}
 
-		userModel := this.DB.First(&checkUser)
+		userModel := this.DB.Where("email = ?", user.Email).First(&checkUser)
 
 		if userModel.RecordNotFound() {
 			if err := this.DB.Create(&user).Error; err != nil {
-				ctx.StatusCode(http.StatusInternalServerError)
+				returnStatus = http.StatusInternalServerError
+				message = append(message, err.Error())
+				success = false
+			} else {
 				ctx.JSON(iris.Map{
-					"message": "Failed to create user",
-					"trace": err.Error(),
+					"user": user,
+					"message": "User created successfully",
+					"success": true,
 				})
 				return
 			}
-
-			ctx.JSON(iris.Map{
-				"user": user,
-				"message": "User created successfully",
-			})
-			return
 		} else {
 			returnStatus = http.StatusConflict
 			message = append(message, fmt.Sprintf("Email %s is already exists", user.Email))
+			success = false
 		}
 	}
 
 	ctx.StatusCode(returnStatus)
 	ctx.JSON(iris.Map{
 		"message": message,
+		"success": success,
 	})
 }
 
@@ -142,6 +149,7 @@ func (this *Controller) Update(ctx iris.Context) {
 		ctx.JSON(iris.Map{
 			"message":"Invalid format",
 			"trace":err.Error(),
+			"success": false,
 		})
 		return
 	}
@@ -155,14 +163,25 @@ func (this *Controller) Update(ctx iris.Context) {
 	if userModel.RecordNotFound() {
 		ctx.JSON(iris.Map{
 			"message": "User not found",
+			"success": false,
 		})
 	} else {
-		ctx.ReadForm(&user)
+		var userParam models.UserOutput
+		ctx.ReadJSON(&userParam)
+		if len(userParam.Name) > 0 {
+			user.Name = userParam.Name
+		}
+
+		if len(userParam.Status) > 0 {
+			user.Status = userParam.Status == "1"
+		}
+
 		if err := this.DB.Save(&user).Error; err != nil {
 			ctx.StatusCode(http.StatusInternalServerError)
 			ctx.JSON(iris.Map{
 				"message": "Failed to update user",
 				"trace": err.Error(),
+				"success": false,
 			})
 			return
 		}
@@ -170,6 +189,7 @@ func (this *Controller) Update(ctx iris.Context) {
 		ctx.JSON(iris.Map{
 			"message": "User updated successfully",
 			"user": user,
+			"success": true,
 		})
 	}
 }
@@ -182,6 +202,7 @@ func (this *Controller) Remove(ctx iris.Context) {
 		ctx.JSON(iris.Map{
 			"message":"Invalid format",
 			"trace":err.Error(),
+			"success": false,
 		})
 		return
 	}
@@ -195,19 +216,23 @@ func (this *Controller) Remove(ctx iris.Context) {
 	if userModel.RecordNotFound() {
 		ctx.JSON(iris.Map{
 			"message": "User not found",
+			"success": false,
 		})
+		return
 	} else {
 		if err := this.DB.Delete(user).Error; err != nil {
 			ctx.StatusCode(http.StatusInternalServerError)
 			ctx.JSON(iris.Map{
 				"message": "Failed to delete user",
 				"trace": err.Error(),
+				"success": false,
 			})
 			return
 		}
 
 		ctx.JSON(iris.Map{
 			"message": "User deleted successfully",
+			"success": true,
 		})
 	}
 }

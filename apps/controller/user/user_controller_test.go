@@ -23,12 +23,14 @@ func TestCreateUser(t *testing.T) {
 
 	e := httptest.New(t, server.App)
 
-	newUser := models.User{
-		Name: "test",
-		Email: "test@mail.com",
+	newUser := iris.Map{
+		"name": "test",
+		"email": "test@mail.com",
 	}
 
-	e.GET(server.RoutePrefix + "/user").WithForm(iris.Map{"Email": newUser.Email}).Expect().Body().Contains("User not found")
+	e.GET(server.RoutePrefix + "/user").
+		WithQueryObject(iris.Map{"email": newUser["email"]}).
+			Expect().Body().Contains("User not found")
 
 	e.GET(server.RoutePrefix + "/user/1").Expect().Status(httptest.StatusNotFound)
 	e.GET(server.RoutePrefix + "/user/op").Expect().Status(httptest.StatusPreconditionFailed)
@@ -37,50 +39,53 @@ func TestCreateUser(t *testing.T) {
 		Expect().Status(httptest.StatusPreconditionRequired)
 
 	e.POST(server.RoutePrefix + "/user").
-		WithForm(newUser).
-			Expect().Body().Contains(newUser.Email)
+		WithJSON(newUser).
+			Expect().Body().Contains(newUser["email"].(string))
 
 	var user = models.User{
-		Email: newUser.Email,
+		Email: newUser["email"].(string),
 	}
-	server.DB.First(&user)
+	server.DB.Where("email = ?", user.Email).First(&user)
 
 	if server.DB.RecordNotFound() {
 		t.Error("Create user is failed")
 	}
 
-	e.GET(server.RoutePrefix + "/user").WithQueryObject(iris.Map{"Email": "test", "Name": "Te", "Status": "1"}).Expect().Body().Contains("data")
+	e.GET(server.RoutePrefix + "/user").
+		WithQueryObject(iris.Map{"email": "test", "name": "Te", "status": "1"}).
+			Expect().Body().Contains("data")
 
-	e.GET(server.RoutePrefix + "/user/" + fmt.Sprint(user.Id)).Expect().Status(httptest.StatusOK)
+	e.GET(server.RoutePrefix + "/user/" + fmt.Sprint(user.Id)).
+		Expect().Status(httptest.StatusOK)
 
 	e.POST(server.RoutePrefix + "/user").
-		WithForm(newUser).
+		WithJSON(newUser).
 		Expect().Status(httptest.StatusConflict)
 
-	updateUser := models.User{
-		Status: false,
-		Name: user.Name + "-1",
+	updateUser := iris.Map{
+		"status": "0",
+		"name": user.Name + "-1",
 	}
 
 	e.PUT(server.RoutePrefix + "/user/0").
-		WithForm(updateUser).
+		WithJSON(updateUser).
 		Expect().Body().Contains("User not found")
 
 	e.PUT(server.RoutePrefix + "/user/" + fmt.Sprint(user.Id)).
-		WithForm(updateUser).
+		WithJSON(updateUser).
 		Expect().Body().Contains("updated successfully")
 
 	e.PUT(server.RoutePrefix + "/user/op").
-		WithForm(updateUser).
+		WithJSON(updateUser).
 		Expect().Status(httptest.StatusPreconditionFailed)
 
 	user = models.User{
 		Id: user.Id,
 	}
 
-	server.DB.First(&user)
+	server.DB.Where("email = ?", newUser["email"]).First(&user)
 
-	if !user.Status {
+	if user.Status {
 		t.Error("User is not updated")
 	}
 

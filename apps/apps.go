@@ -5,6 +5,7 @@ import (
 	"social-api/apps/controller/landing"
 	"social-api/apps/controller/user"
 	"github.com/jinzhu/gorm"
+	"social-api/apps/controller/connection"
 )
 
 type Routes struct {
@@ -23,6 +24,7 @@ func (this *Routes) CreateApp() *iris.Application {
 	apiPrefix := "/api/v1"
 	(&landing.Routes{DB: this.DB, RoutesPrefix: apiPrefix}).Handler(app)
 	(&user.Routes{DB: this.DB, RoutesPrefix: apiPrefix}).Handler(app)
+	(&connection.Routes{DB: this.DB, RoutesPrefix: apiPrefix}).Handler(app)
 
 	return app
 }

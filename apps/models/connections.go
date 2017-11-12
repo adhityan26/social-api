@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-type Friend struct {
+type Connection struct {
 	Id                  int32      `gorm:"primary_key autoincrement"; json:"id"`
 	UserId              int32      `json:user_id`
 	FriendId            int32      `json:friend_id`
