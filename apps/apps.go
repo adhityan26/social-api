@@ -3,6 +3,7 @@ package apps
 import (
 	"github.com/kataras/iris"
 	"social-api/apps/controller/landing"
+	"social-api/apps/controller/user"
 	"github.com/jinzhu/gorm"
 )
 
@@ -20,7 +21,8 @@ func (this *Routes) CreateApp() *iris.Application {
 
 	// Api
 	apiPrefix := "/api/v1"
-	landing.Routes{DB: this.DB, RoutesPrefix: apiPrefix}.Handler(app)
+	(&landing.Routes{DB: this.DB, RoutesPrefix: apiPrefix}).Handler(app)
+	(&user.Routes{DB: this.DB, RoutesPrefix: apiPrefix}).Handler(app)
 
 	return app
 }

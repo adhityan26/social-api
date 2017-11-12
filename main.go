@@ -6,6 +6,9 @@ import (
 	"os"
 	"social-api/apps"
 	"github.com/jinzhu/gorm"
+
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"social-api/apps/models"
 )
 
 func main() {
@@ -19,5 +22,7 @@ func main() {
 	}
 	defer db.Close()
 
-	apps.Routes{DB: db}.CreateApp().Run(iris.Addr(os.Getenv("HOST") + ":" + os.Getenv("PORT")), iris.WithoutServerError(iris.ErrServerClosed))
+	db.AutoMigrate(&models.User{})
+
+	(&apps.Routes{DB: db}).CreateApp().Run(iris.Addr(os.Getenv("HOST") + ":" + os.Getenv("PORT")), iris.WithoutServerError(iris.ErrServerClosed))
 }
