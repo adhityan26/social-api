@@ -17,11 +17,51 @@ type connectionOutput struct {
 	Friend []string `json: friend`
 }
 
+type friendList struct {
+	Email string `json: email`
+}
+
 func (this *Controller) Index(ctx iris.Context) {
-	ctx.StatusCode(http.StatusGone)
+	param := friendList{}
+	ctx.ReadJSON(&param)
+
+	var success, returnStatus = true, 200
+	var message = []string{}
+
+	if len(param.Email) == 0 {
+		returnStatus = http.StatusPreconditionRequired
+		message = append(message, "Email should not be empty")
+		success = false
+	}
+
+	if success {
+		var user = models.User{}
+		userModel := this.DB.Where("email = ?", param.Email).
+			Preload("Friends").
+				Preload("Friends.FriendDetail").First(&user)
+		if userModel.RecordNotFound() {
+			returnStatus = http.StatusPreconditionFailed
+			message = append(message, "User not found")
+			success = false
+		} else {
+			listEmail := []string{}
+			for _, friend := range user.Friends {
+				listEmail = append(listEmail, friend.FriendDetail.Email)
+			}
+
+			ctx.JSON(iris.Map{
+				"friends": listEmail,
+				"count": len(user.Friends),
+				"success": success,
+			})
+			return
+		}
+	}
+
+	ctx.StatusCode(returnStatus)
 	ctx.JSON(iris.Map{
-		"message": "Not yet implemented",
-		"success": false,
+		"message": message,
+		"success": success,
 	})
 }
 
@@ -44,12 +84,6 @@ func (this *Controller) Create(ctx iris.Context) {
 		success = false
 	}
 
-	//if len(user.Name) == 0 {
-	//	returnStatus = http.StatusPreconditionRequired
-	//	message = append(message, "Name cannot be empty")
-	//	success = false
-	//}
-	//
 	if success {
 		var user1 = models.User{}
 		userModel1 := this.DB.Where("email = ?", param.Friend[0]).First(&user1)

@@ -11,6 +11,7 @@ type User struct {
 	Status				bool	`json:"status"`
 	CreatedAt			time.Time 	`json:"created_at"`
 	UpdatedAt			time.Time  `json:"updated_at"`
+	Friends				[]Connection `gorm:"ForeignKey:FriendId;AssociationForeignKey:Id"`
 }
 
 type UserOutput struct {
