@@ -1,4 +1,4 @@
-package connection
+package message
 
 import (
 	"github.com/kataras/iris"
@@ -12,10 +12,8 @@ type Routes struct {
 
 func (this *Routes) Handler(app *iris.Application) {
 	controller := Controller{DB: this.DB}
-	api := app.Party(this.RoutesPrefix + "/connection")
+	api := app.Party(this.RoutesPrefix + "/message")
 	{
-		api.Post("/show", controller.Index)
 		api.Post("/", controller.Create)
-		api.Post("/common", controller.Common)
 	}
 }

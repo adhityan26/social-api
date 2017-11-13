@@ -187,14 +187,6 @@ func (this *Controller) Create(ctx iris.Context) {
 	})
 }
 
-func (this *Controller) Remove(ctx iris.Context) {
-	ctx.StatusCode(http.StatusGone)
-	ctx.JSON(iris.Map{
-		"message": "Not yet implemented",
-		"success": false,
-	})
-}
-
 func (this *Controller) Common(ctx iris.Context) {
 	param := connectionOutput{}
 	ctx.ReadJSON(&param)
