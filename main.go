@@ -22,7 +22,7 @@ func main() {
 	}
 	defer db.Close()
 
-	db.AutoMigrate(&models.User{}, &models.Connection{})
+	db.AutoMigrate(&models.User{}, &models.Connection{}, &models.Subscribe{})
 
 	(&apps.Routes{DB: db}).CreateApp().Run(iris.Addr(os.Getenv("HOST") + ":" + os.Getenv("PORT")), iris.WithoutServerError(iris.ErrServerClosed))
 }
