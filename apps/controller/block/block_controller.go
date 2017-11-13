@@ -1,4 +1,4 @@
-package subscribe
+package block
 
 import (
 	"github.com/kataras/iris"
@@ -13,13 +13,13 @@ type Controller struct {
 	DB *gorm.DB
 }
 
-type subscribeOutput struct {
+type blockOutput struct {
 	Requestor string `json: requestor`
 	Target string `json: target`
 }
 
 func (this *Controller) Create(ctx iris.Context) {
-	param := subscribeOutput{}
+	param := blockOutput{}
 	ctx.ReadJSON(&param)
 
 	var success, returnStatus = true, 200
@@ -62,50 +62,36 @@ func (this *Controller) Create(ctx iris.Context) {
 		}
 
 		if success {
-			var checkBlocked1 models.Block
-			checkBlockedModel1 := this.DB.
-				Where("requestor_id = ? and target_id = ?", user2.Id, user1.Id).
-				First(&checkBlocked1)
+			var checkBlock models.Block
+			checkBlockModel := this.DB.
+				Where("requestor_id = ?", user1.Id).
+				Where("target_id = ?", user2.Id).
+				First(&checkBlock)
 
-			if checkBlockedModel1.RecordNotFound() {
-
-				var checkSubscribe models.Subscribe
-				checkSubscribeModel := this.DB.
-					Where("requestor_id = ?", user1.Id).
-					Where("target_id = ?", user2.Id).
-					First(&checkSubscribe)
-
-				if checkSubscribeModel.RecordNotFound() {
-					if success {
-						userSubscribe := models.Subscribe{}
-						userSubscribe.RequestorId = user1.Id
-						userSubscribe.TargetId = user2.Id
-						userSubscribe.CreatedAt = time.Now()
-						userSubscribe.UpdatedAt = time.Now()
-						if err := this.DB.Create(&userSubscribe).Error; err != nil {
-							returnStatus = http.StatusInternalServerError
-							message = append(message, err.Error())
-							success = false
-						}
-
-						if success {
-							ctx.JSON(iris.Map{
-								"success": true,
-							})
-							return
-						}
+			if checkBlockModel.RecordNotFound() {
+				if success {
+					userBlock := models.Block{}
+					userBlock.RequestorId = user1.Id
+					userBlock.TargetId = user2.Id
+					userBlock.CreatedAt = time.Now()
+					userBlock.UpdatedAt = time.Now()
+					if err := this.DB.Create(&userBlock).Error; err != nil {
+						returnStatus = http.StatusInternalServerError
+						message = append(message, err.Error())
+						success = false
 					}
-				} else {
-					returnStatus = http.StatusPreconditionFailed
-					message = append(message, fmt.Sprintf("Email %s already subscribe %s", param.Requestor, param.Target))
-					success = false
+
+					if success {
+						ctx.JSON(iris.Map{
+							"success": true,
+						})
+						return
+					}
 				}
 			} else {
-				if !checkBlockedModel1.RecordNotFound() {
-					returnStatus = http.StatusPreconditionFailed
-					message = append(message, fmt.Sprintf("Email %s is blocked by %s", param.Requestor, param.Target))
-					success = false
-				}
+				returnStatus = http.StatusPreconditionFailed
+				message = append(message, fmt.Sprintf("Email %s already blocked %s", param.Requestor, param.Target))
+				success = false
 			}
 		}
 	}

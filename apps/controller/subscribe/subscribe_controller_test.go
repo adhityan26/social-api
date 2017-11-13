@@ -17,7 +17,7 @@ var (
 	server = test.Setup()
 )
 
-func TestCreateConnection(t *testing.T) {
+func TestCreateSubscription(t *testing.T) {
 	defer server.DB.Close()
 	controller := &subscribe.Routes{DB: server.DB, RoutesPrefix: server.RoutePrefix}
 	controller.Handler(server.App)

@@ -93,6 +93,7 @@ func (this *Controller) Create(ctx iris.Context) {
 		if userModel1.RecordNotFound() {
 			returnStatus = http.StatusNotFound
 			message = append(message, fmt.Sprintf("Email %s not found", param.Friends[0]))
+			success = false
 		}
 
 		if userModel2.RecordNotFound() {
@@ -102,20 +103,30 @@ func (this *Controller) Create(ctx iris.Context) {
 		}
 
 		if success {
-			var checkFriend1 models.Connection
-			checkFriendModel1 := this.DB.
-				Where("user_id = ?", user1.Id).
-				Where("friend_id = ?", user2.Id).
-				First(&checkFriend1)
+			var checkBlocked1 models.Block
+			checkBlockedModel1 := this.DB.
+				Where("requestor_id = ? and target_id = ?", user1.Id, user2.Id).
+				First(&checkBlocked1)
 
-			var checkFriend2 models.Connection
-			checkFriendModel2 := this.DB.
-				Where("user_id = ?", user2.Id).
-				Where("friend_id = ?", user1.Id).
-				First(&checkFriend2)
+			var checkBlocked2 models.Block
+			checkBlockedModel2 := this.DB.
+				Where("requestor_id = ? and target_id = ?", user2.Id, user1.Id).
+				First(&checkBlocked2)
 
-			if checkFriendModel1.RecordNotFound() && checkFriendModel2.RecordNotFound() {
-				if success {
+			if checkBlockedModel1.RecordNotFound() && checkBlockedModel2.RecordNotFound() {
+				var checkFriend1 models.Connection
+				checkFriendModel1 := this.DB.
+					Where("user_id = ?", user1.Id).
+					Where("friend_id = ?", user2.Id).
+					First(&checkFriend1)
+
+				var checkFriend2 models.Connection
+				checkFriendModel2 := this.DB.
+					Where("user_id = ?", user2.Id).
+					Where("friend_id = ?", user1.Id).
+					First(&checkFriend2)
+
+				if checkFriendModel1.RecordNotFound() && checkFriendModel2.RecordNotFound() {
 					tx := this.DB.Begin()
 					userConnection1 := models.Connection{}
 					userConnection1.UserId = user1.Id
@@ -149,11 +160,22 @@ func (this *Controller) Create(ctx iris.Context) {
 						})
 						return
 					}
+				} else {
+					returnStatus = http.StatusPreconditionFailed
+					message = append(message, fmt.Sprintf("Email %s and %s is already friend", param.Friends[0], param.Friends[1]))
+					success = false
 				}
 			} else {
-				returnStatus = http.StatusPreconditionFailed
-				message = append(message, fmt.Sprintf("Email %s and %s is already friend", param.Friends[1], param.Friends[1]))
-				success = false
+				if !checkBlockedModel1.RecordNotFound() {
+					returnStatus = http.StatusPreconditionFailed
+					message = append(message, fmt.Sprintf("Email %s is blocked by %s", param.Friends[0], param.Friends[1]))
+					success = false
+				}
+				if !checkBlockedModel2.RecordNotFound() {
+					returnStatus = http.StatusPreconditionFailed
+					message = append(message, fmt.Sprintf("Email %s is blocked by %s", param.Friends[1], param.Friends[0]))
+					success = false
+				}
 			}
 		}
 	}
