@@ -1,3 +1,5 @@
+// Package block is used to handle
+// block user update by email address
 package block
 
 import (
@@ -18,6 +20,7 @@ type blockOutput struct {
 	Target string `json: target`
 }
 
+// Block user by email address
 func (this *Controller) Create(ctx iris.Context) {
 	param := blockOutput{}
 	ctx.ReadJSON(&param)

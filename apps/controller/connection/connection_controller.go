@@ -1,3 +1,5 @@
+// Package connection is used to handle
+// user connection friend by email address
 package connection
 
 import (
@@ -21,6 +23,7 @@ type friendList struct {
 	Email string `json: email`
 }
 
+// View list friends by email address
 func (this *Controller) Index(ctx iris.Context) {
 	param := friendList{}
 	ctx.ReadJSON(&param)
@@ -65,6 +68,7 @@ func (this *Controller) Index(ctx iris.Context) {
 	})
 }
 
+// Create connection between two email address
 func (this *Controller) Create(ctx iris.Context) {
 	param := connectionOutput{}
 	ctx.ReadJSON(&param)
@@ -187,6 +191,7 @@ func (this *Controller) Create(ctx iris.Context) {
 	})
 }
 
+// view common friend between teo emil address
 func (this *Controller) Common(ctx iris.Context) {
 	param := connectionOutput{}
 	ctx.ReadJSON(&param)

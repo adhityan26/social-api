@@ -1,3 +1,5 @@
+// Package subscribe is used to handle
+// user subscription friend by email address
 package subscribe
 
 import (
@@ -18,6 +20,7 @@ type subscribeOutput struct {
 	Target string `json: target`
 }
 
+// create subscription user to receive user updates
 func (this *Controller) Create(ctx iris.Context) {
 	param := subscribeOutput{}
 	ctx.ReadJSON(&param)

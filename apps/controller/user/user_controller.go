@@ -13,6 +13,7 @@ type Controller struct {
 	DB *gorm.DB
 }
 
+// View list user by criteria
 func (this *Controller) Index(ctx iris.Context) {
 	var listUser []models.User
 
@@ -46,6 +47,7 @@ func (this *Controller) Index(ctx iris.Context) {
 	})
 }
 
+// View detail user by id
 func (this *Controller) Show(ctx iris.Context) {
 	id, err := ctx.Params().GetInt("id")
 
@@ -83,6 +85,7 @@ func (this *Controller) Show(ctx iris.Context) {
 	ctx.JSON(userOutput)
 }
 
+// Create new user
 func (this *Controller) Create(ctx iris.Context) {
 	var user models.User
 	var userParam models.UserOutput
@@ -141,6 +144,7 @@ func (this *Controller) Create(ctx iris.Context) {
 	})
 }
 
+// update user by user id
 func (this *Controller) Update(ctx iris.Context) {
 	id, err := ctx.Params().GetInt("id")
 
@@ -194,6 +198,7 @@ func (this *Controller) Update(ctx iris.Context) {
 	}
 }
 
+// Remove user by id
 func (this *Controller) Remove(ctx iris.Context) {
 	id, err := ctx.Params().GetInt("id")
 

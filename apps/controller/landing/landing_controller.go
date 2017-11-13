@@ -1,3 +1,4 @@
+// Package landing for handling landing page api
 package landing
 
 import (
@@ -9,6 +10,7 @@ type Controller struct {
 	DB *gorm.DB
 }
 
+// View api version
 func (this *Controller) Index(ctx iris.Context) {
-	ctx.JSON(iris.Map{"message": "Social API v0.1!"})
+	ctx.JSON(iris.Map{"message": "Social API v0.5!"})
 }

@@ -10,6 +10,7 @@ type Routes struct {
 	RoutesPrefix string
 }
 
+// Handle api route for manage user
 func (this *Routes) Handler(app *iris.Application) {
 	controller := Controller{DB: this.DB}
 	api := app.Party(this.RoutesPrefix + "/user")

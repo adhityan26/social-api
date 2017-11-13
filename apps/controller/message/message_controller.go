@@ -1,3 +1,5 @@
+// Package message is used to handle
+// sending user message
 package message
 
 import (
@@ -19,6 +21,7 @@ type messageOutput struct {
 	Text string `json: text`
 }
 
+// Create message and view list user that can receive update
 func (this *Controller) Create(ctx iris.Context) {
 	param := messageOutput{}
 	ctx.ReadJSON(&param)

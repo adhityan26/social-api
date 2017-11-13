@@ -27,10 +27,6 @@ ADD config/reflex.conf /go/_tools
 
 RUN chmod +x /go/_tools/build.sh
 
-# Add file watcher
-RUN go get -v github.com/cespare/reflex
-#RUN go get -v github.com/kataras/iris/iris
-
 # Add startup script
 #ADD ./startup.sh $GOPATH/startup.sh
 #ENTRYPOINT $GOPATH/startup.sh
