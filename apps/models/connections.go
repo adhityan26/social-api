@@ -8,5 +8,6 @@ type Connection struct {
 	FriendId            int32      `json:friend_id`
 	CreatedAt			time.Time  `json:"created_at"`
 	UpdatedAt			time.Time  `json:"updated_at"`
-	FriendDetail		User	   `gorm:"ForeignKey:Id;AssociationForeignKey:UserId"`
+	UserDetail			User	   `gorm:"ForeignKey:Id;AssociationForeignKey:UserId"`
+	FriendDetail		User	   `gorm:"ForeignKey:Id;AssociationForeignKey:FriendId"`
 }

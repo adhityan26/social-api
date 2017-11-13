@@ -16,6 +16,7 @@ func (this *Routes) Handler(app *iris.Application) {
 	{
 		api.Post("/show", controller.Index)
 		api.Post("/", controller.Create)
+		api.Post("/common", controller.Common)
 		api.Delete("/remove", controller.Remove)
 	}
 }

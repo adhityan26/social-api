@@ -53,17 +53,17 @@ func TestCreateConnection(t *testing.T) {
 	}
 
 	e.POST(server.RoutePrefix + "/connection").
-		WithJSON(iris.Map{"friend": [2]string{userList[0].Email, userList[0].Email}}).Expect().Status(httptest.StatusPreconditionFailed)
+		WithJSON(iris.Map{"friends": [2]string{userList[0].Email, userList[0].Email}}).Expect().Status(httptest.StatusPreconditionFailed)
 
 	e.POST(server.RoutePrefix + "/connection").
 		Expect().Status(httptest.StatusPreconditionRequired)
 
 	e.POST(server.RoutePrefix + "/connection").
-		WithJSON(iris.Map{"friend": [1]string{userList[0].Email}}).Expect().Status(httptest.StatusPreconditionRequired)
+		WithJSON(iris.Map{"friends": [1]string{userList[0].Email}}).Expect().Status(httptest.StatusPreconditionRequired)
 
 	for i := 0; i < 5; i++ {
 		e.POST(server.RoutePrefix + "/connection").
-			WithJSON(iris.Map{"friend": [2]string{userList[0].Email, userList[i + 1].Email}}).
+			WithJSON(iris.Map{"friends": [2]string{userList[0].Email, userList[i + 1].Email}}).
 				Expect().Body().Contains("\"success\":true")
 	}
 	var userConnection []models.Connection
@@ -75,7 +75,7 @@ func TestCreateConnection(t *testing.T) {
 
 	for i := 9; i > 5; i-- {
 		e.POST(server.RoutePrefix + "/connection").
-			WithJSON(iris.Map{"friend": [2]string{userList[1].Email, userList[i].Email}}).
+			WithJSON(iris.Map{"friends": [2]string{userList[1].Email, userList[i].Email}}).
 			Expect().Body().Contains("\"success\":true")
 	}
 
@@ -85,11 +85,11 @@ func TestCreateConnection(t *testing.T) {
 	}
 
 	e.POST(server.RoutePrefix + "/connection").
-		WithJSON(iris.Map{"friend": [2]string{userList[1].Email, userList[7].Email}}).
+		WithJSON(iris.Map{"friends": [2]string{userList[1].Email, userList[7].Email}}).
 			Expect().Body().Contains("\"success\":false")
 
 	e.POST(server.RoutePrefix + "/connection").
-		WithJSON(iris.Map{"friend": [2]string{"a@a.com", "a@b.com"}}).
+		WithJSON(iris.Map{"friends": [2]string{"a@a.com", "a@b.com"}}).
 			Expect().Body().Contains("\"success\":false")
 
 	e.POST(server.RoutePrefix + "/connection/show").
@@ -97,8 +97,31 @@ func TestCreateConnection(t *testing.T) {
 			Expect().Body().Contains("\"count\":5")
 
 	e.POST(server.RoutePrefix + "/connection/show").
+		Expect().Body().Contains("\"success\":false")
+
+	e.POST(server.RoutePrefix + "/connection/show").
 		WithJSON(iris.Map{"email": userList[1].Email}).
 			Expect().Body().Contains(userList[0].Email)
+
+	e.POST(server.RoutePrefix + "/connection/common").
+		WithJSON(iris.Map{"friends": [1]string{userList[0].Email}}).
+			Expect().Body().Contains("\"success\":false")
+
+	e.POST(server.RoutePrefix + "/connection/common").
+		WithJSON(iris.Map{"friends": [2]string{"b@b.com", "a@a.com"}}).
+			Expect().Body().Contains("\"success\":false")
+
+	e.POST(server.RoutePrefix + "/connection/common").
+		WithJSON(iris.Map{"friends": [2]string{"a@a.com", "a@a.com"}}).
+			Expect().Body().Contains("\"success\":false")
+
+	e.POST(server.RoutePrefix + "/connection/common").
+		WithJSON(iris.Map{"friends": [2]string{userList[0].Email, userList[9].Email}}).
+			Expect().Body().Contains(userList[1].Email)
+
+	e.POST(server.RoutePrefix + "/connection/common").
+		WithJSON(iris.Map{"friends": [2]string{userList[0].Email, userList[2].Email}}).
+			Expect().Body().Contains("\"success\":false")
 
 	//remove test data
 	for _, us := range userList {
