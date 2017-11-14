@@ -12,5 +12,5 @@ type Controller struct {
 
 // View api version
 func (this *Controller) Index(ctx iris.Context) {
-	ctx.JSON(iris.Map{"message": "Social API v0.5!"})
+	ctx.JSON(iris.Map{"message": "Social API v1.0!"})
 }

@@ -5,10 +5,10 @@ package connection
 import (
 	"github.com/kataras/iris"
 	"github.com/jinzhu/gorm"
-	"net/http"
 	"fmt"
 	"social-api/apps/models"
 	"time"
+	"social-api/apps/helper"
 )
 
 type Controller struct {
@@ -25,27 +25,27 @@ type friendList struct {
 
 // View list friends by email address
 func (this *Controller) Index(ctx iris.Context) {
+	var returnStatus, success = 200, true
+	var messages = []string{}
+
 	param := friendList{}
 	ctx.ReadJSON(&param)
 
-	var success, returnStatus = true, 200
-	var message = []string{}
-
 	if len(param.Email) == 0 {
-		returnStatus = http.StatusPreconditionRequired
-		message = append(message, "Email should not be empty")
-		success = false
+		returnStatus, success = helper.MandatoryErrorMessage("Email", &messages)
+	}
+
+	if helper.ValidateEMail(param.Email) && len(param.Email) > 0 {
+		returnStatus, success = helper.InvalidFormatMessage("Email", "email(mail@domain.com)", &messages)
 	}
 
 	if success {
 		var user = models.User{}
 		userModel := this.DB.Where("email = ?", param.Email).
 			Preload("Friends").
-				Preload("Friends.UserDetail").First(&user)
+			Preload("Friends.UserDetail").First(&user)
 		if userModel.RecordNotFound() {
-			returnStatus = http.StatusPreconditionFailed
-			message = append(message, "User not found")
-			success = false
+			returnStatus, success = helper.RecordNotFoundMessage("User", &messages)
 		} else {
 			listEmail := []string{}
 			for _, friend := range user.Friends {
@@ -54,7 +54,7 @@ func (this *Controller) Index(ctx iris.Context) {
 
 			ctx.JSON(iris.Map{
 				"friends": listEmail,
-				"count": len(user.Friends),
+				"count":   len(user.Friends),
 				"success": success,
 			})
 			return
@@ -63,29 +63,33 @@ func (this *Controller) Index(ctx iris.Context) {
 
 	ctx.StatusCode(returnStatus)
 	ctx.JSON(iris.Map{
-		"message": message,
-		"success": success,
+		"messages": messages,
+		"success":  success,
 	})
 }
 
 // Create connection between two email address
 func (this *Controller) Create(ctx iris.Context) {
+	var returnStatus, success = 200, true
+	var messages = []string{}
+
 	param := connectionOutput{}
 	ctx.ReadJSON(&param)
 
-	var success, returnStatus = true, 200
-	var message = []string{}
-
 	if len(param.Friends) < 2 {
-		returnStatus = http.StatusPreconditionRequired
-		message = append(message, "Must provide 2 email")
-		success = false
+		returnStatus, success = helper.CustomPreconditionRequiredErrorMessage("Must provide 2 email", &messages)
 	}
 
 	if (len(param.Friends) == 2) && (param.Friends[0] == param.Friends[1]) {
-		returnStatus = http.StatusPreconditionFailed
-		message = append(message, "Email cannot be the same")
-		success = false
+		returnStatus, success = helper.CustomPreconditionErrorMessage("Email cannot be the same", &messages)
+	}
+
+	if len(param.Friends) > 0 && helper.ValidateEMail(param.Friends[0]) && len(param.Friends[0]) > 0 {
+		returnStatus, success = helper.InvalidFormatMessage("Email 1", "email(mail@domain.com)", &messages)
+	}
+
+	if len(param.Friends) > 1 && helper.ValidateEMail(param.Friends[1]) && len(param.Friends[1]) > 0 {
+		returnStatus, success = helper.InvalidFormatMessage("Email 2", "email(mail@domain.com)", &messages)
 	}
 
 	if success {
@@ -95,15 +99,11 @@ func (this *Controller) Create(ctx iris.Context) {
 		userModel2 := this.DB.Where("email = ?", param.Friends[1]).First(&user2)
 
 		if userModel1.RecordNotFound() {
-			returnStatus = http.StatusNotFound
-			message = append(message, fmt.Sprintf("Email %s not found", param.Friends[0]))
-			success = false
+			returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Friends[0]), &messages)
 		}
 
 		if userModel2.RecordNotFound() {
-			returnStatus = http.StatusNotFound
-			message = append(message, fmt.Sprintf("Email %s not found", param.Friends[1]))
-			success = false
+			returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Friends[1]), &messages)
 		}
 
 		if success {
@@ -138,9 +138,7 @@ func (this *Controller) Create(ctx iris.Context) {
 					userConnection1.CreatedAt = time.Now()
 					userConnection1.UpdatedAt = time.Now()
 					if err := tx.Create(&userConnection1).Error; err != nil {
-						returnStatus = http.StatusInternalServerError
-						message = append(message, err.Error())
-						success = false
+						returnStatus, success = helper.UndefinedErrorMessage(err.Error(), &messages)
 					}
 
 					if success {
@@ -150,10 +148,7 @@ func (this *Controller) Create(ctx iris.Context) {
 						userConnection2.CreatedAt = time.Now()
 						userConnection2.UpdatedAt = time.Now()
 						if err := tx.Create(&userConnection2).Error; err != nil {
-							tx.Rollback()
-							returnStatus = http.StatusInternalServerError
-							message = append(message, err.Error())
-							success = false
+							returnStatus, success = helper.UndefinedErrorMessage(err.Error(), &messages)
 						}
 					}
 
@@ -163,22 +158,18 @@ func (this *Controller) Create(ctx iris.Context) {
 							"success": true,
 						})
 						return
+					} else {
+						tx.Rollback()
 					}
 				} else {
-					returnStatus = http.StatusPreconditionFailed
-					message = append(message, fmt.Sprintf("Email %s and %s is already friend", param.Friends[0], param.Friends[1]))
-					success = false
+					returnStatus, success = helper.CustomPreconditionErrorMessage(fmt.Sprintf("Email %s and %s is already friend", param.Friends[0], param.Friends[1]), &messages)
 				}
 			} else {
 				if !checkBlockedModel1.RecordNotFound() {
-					returnStatus = http.StatusPreconditionFailed
-					message = append(message, fmt.Sprintf("Email %s is blocked by %s", param.Friends[0], param.Friends[1]))
-					success = false
+					returnStatus, success = helper.CustomPreconditionErrorMessage(fmt.Sprintf("Email %s is blocked by %s", param.Friends[0], param.Friends[1]), &messages)
 				}
 				if !checkBlockedModel2.RecordNotFound() {
-					returnStatus = http.StatusPreconditionFailed
-					message = append(message, fmt.Sprintf("Email %s is blocked by %s", param.Friends[1], param.Friends[0]))
-					success = false
+					returnStatus, success = helper.CustomPreconditionErrorMessage(fmt.Sprintf("Email %s is blocked by %s", param.Friends[1], param.Friends[0]), &messages)
 				}
 			}
 		}
@@ -186,29 +177,25 @@ func (this *Controller) Create(ctx iris.Context) {
 
 	ctx.StatusCode(returnStatus)
 	ctx.JSON(iris.Map{
-		"message": message,
-		"success": success,
+		"messages": messages,
+		"success":  success,
 	})
 }
 
 // view common friend between teo emil address
 func (this *Controller) Common(ctx iris.Context) {
+	var returnStatus, success = 200, true
+	var messages = []string{}
+
 	param := connectionOutput{}
 	ctx.ReadJSON(&param)
 
-	var success, returnStatus = true, 200
-	var message = []string{}
-
 	if len(param.Friends) < 2 {
-		returnStatus = http.StatusPreconditionRequired
-		message = append(message, "Must provide 2 email")
-		success = false
+		returnStatus, success = helper.CustomPreconditionErrorMessage("Must provide 2 email", &messages)
 	}
 
 	if (len(param.Friends) == 2) && (param.Friends[0] == param.Friends[1]) {
-		returnStatus = http.StatusPreconditionFailed
-		message = append(message, "Email cannot be the same")
-		success = false
+		returnStatus, success = helper.CustomPreconditionErrorMessage("Email cannot be the same", &messages)
 	}
 
 	if success {
@@ -218,26 +205,21 @@ func (this *Controller) Common(ctx iris.Context) {
 		userModel2 := this.DB.Where("email = ?", param.Friends[1]).First(&user2)
 
 		if userModel1.RecordNotFound() {
-			returnStatus = http.StatusNotFound
-			message = append(message, fmt.Sprintf("Email %s not found", param.Friends[0]))
+			returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Friends[0]), &messages)
 		}
 
 		if userModel2.RecordNotFound() {
-			returnStatus = http.StatusNotFound
-			message = append(message, fmt.Sprintf("Email %s not found", param.Friends[1]))
-			success = false
+			returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Friends[1]), &messages)
 		}
 
 		if success {
 			var userCommon []models.Connection
 			connectionModel := this.DB.
 				Where("user_id = ? and exists(select 'x' from connections c1 where c1.user_id = ? and c1.friend_id = connections.friend_id)", user1.Id, user2.Id).
-					Preload("FriendDetail").Find(&userCommon)
+				Preload("FriendDetail").Find(&userCommon)
 
 			if connectionModel.RecordNotFound() || len(userCommon) == 0 {
-				returnStatus = http.StatusNotFound
-				message = append(message, "No common friend found")
-				success = false
+				returnStatus, success = helper.RecordNotFoundMessage("Common friend", &messages)
 			} else {
 				listEmail := []string{}
 				for _, connection := range userCommon {
@@ -246,7 +228,7 @@ func (this *Controller) Common(ctx iris.Context) {
 
 				ctx.JSON(iris.Map{
 					"friends": listEmail,
-					"count": len(userCommon),
+					"count":   len(userCommon),
 					"success": success,
 				})
 				return
@@ -256,7 +238,7 @@ func (this *Controller) Common(ctx iris.Context) {
 
 	ctx.StatusCode(returnStatus)
 	ctx.JSON(iris.Map{
-		"message": message,
-		"success": success,
+		"messages": messages,
+		"success":  success,
 	})
 }

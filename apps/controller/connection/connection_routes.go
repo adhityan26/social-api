@@ -6,7 +6,7 @@ import (
 )
 
 type Routes struct {
-	DB *gorm.DB
+	DB           *gorm.DB
 	RoutesPrefix string
 }
 

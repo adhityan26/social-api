@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	server = test.Setup()
+	server = test.Create()
 )
 
 func TestBlockUser(t *testing.T) {
@@ -37,14 +37,14 @@ func TestBlockUser(t *testing.T) {
 
 	//init test user
 	newUser := models.User{
-		Name: "test",
+		Name:  "test",
 		Email: "test@mail.com",
 	}
 
 	for i := 0; i < 10; i++ {
 		dataUser := iris.Map{
-			"name": newUser.Name + "_" + fmt.Sprint(i),
-			"email": "mail_" + fmt.Sprint(i) + "_" + newUser.Email,
+			"name":  newUser.Name + "_" + fmt.Sprint(i),
+			"email": "block_mail_" + fmt.Sprint(i) + "_" + newUser.Email,
 		}
 		e.POST(server.RoutePrefix + "/user").
 			WithJSON(dataUser).
@@ -55,22 +55,22 @@ func TestBlockUser(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		user := models.User{}
 
-		server.DB.Where("email = ?", "mail_" + fmt.Sprint(i) + "_" + newUser.Email).First(&user)
+		server.DB.Where("email = ?", "block_mail_"+fmt.Sprint(i)+"_"+newUser.Email).First(&user)
 
 		userList = append(userList, user)
 	}
 
 	e.POST(server.RoutePrefix + "/block").
 		WithJSON(iris.Map{"requestor": userList[0].Email, "target": userList[0].Email}).
-			Expect().Status(httptest.StatusPreconditionFailed)
+		Expect().Status(httptest.StatusPreconditionFailed)
 
 	e.POST(server.RoutePrefix + "/block").
 		Expect().Status(httptest.StatusPreconditionRequired)
 
 	for i := 0; i < 5; i++ {
 		e.POST(server.RoutePrefix + "/block").
-			WithJSON(iris.Map{"requestor": userList[0].Email, "target": userList[i + 1].Email}).
-				Expect().Body().Contains("\"success\":true")
+			WithJSON(iris.Map{"requestor": userList[0].Email, "target": userList[i+1].Email}).
+			Expect().Body().Contains("\"success\":true")
 	}
 	var userBlock []models.Block
 
@@ -82,7 +82,7 @@ func TestBlockUser(t *testing.T) {
 	for i := 9; i > 5; i-- {
 		e.POST(server.RoutePrefix + "/block").
 			WithJSON(iris.Map{"requestor": userList[1].Email, "target": userList[i].Email}).
-				Expect().Body().Contains("\"success\":true")
+			Expect().Body().Contains("\"success\":true")
 	}
 
 	server.DB.Where("requestor_id = ?", userList[1].Id).Find(&userBlock)
@@ -92,23 +92,28 @@ func TestBlockUser(t *testing.T) {
 
 	e.POST(server.RoutePrefix + "/block").
 		WithJSON(iris.Map{"requestor": userList[0].Email, "target": userList[1].Email}).
-			Expect().Body().Contains("\"success\":false")
+		Expect().Body().Contains("\"success\":false")
+
+	e.POST(server.RoutePrefix + "/block").
+		WithJSON(iris.Map{"requestor": "aaa", "target": "aaa"}).
+		Expect().Body().Contains("\"success\":false")
+
 
 	e.POST(server.RoutePrefix + "/block").
 		WithJSON(iris.Map{"requestor": "a@a.com", "target": "a@b.com"}).
-			Expect().Body().Contains("\"success\":false")
+		Expect().Body().Contains("\"success\":false")
 
 	e.POST(server.RoutePrefix + "/connection").
 		WithJSON(iris.Map{"friends": [2]string{userList[0].Email, userList[1].Email}}).
-			Expect().Body().Contains("\"success\":false")
+		Expect().Body().Contains("\"success\":false")
 
 	e.POST(server.RoutePrefix + "/connection").
 		WithJSON(iris.Map{"friends": [2]string{userList[2].Email, userList[0].Email}}).
-			Expect().Body().Contains("\"success\":false")
+		Expect().Body().Contains("\"success\":false")
 
 	e.POST(server.RoutePrefix + "/connection").
 		WithJSON(iris.Map{"friends": [2]string{userList[0].Email, userList[8].Email}}).
-			Expect().Body().Contains("\"success\":true")
+		Expect().Body().Contains("\"success\":true")
 
 	e.POST(server.RoutePrefix + "/subscribe").
 		WithJSON(iris.Map{"requestor": userList[1].Email, "target": userList[0].Email}).

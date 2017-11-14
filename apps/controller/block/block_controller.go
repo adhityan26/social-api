@@ -5,10 +5,10 @@ package block
 import (
 	"github.com/kataras/iris"
 	"github.com/jinzhu/gorm"
-	"net/http"
 	"fmt"
 	"social-api/apps/models"
 	"time"
+	"social-api/apps/helper"
 )
 
 type Controller struct {
@@ -17,33 +17,35 @@ type Controller struct {
 
 type blockOutput struct {
 	Requestor string `json: requestor`
-	Target string `json: target`
+	Target    string `json: target`
 }
 
 // Block user by email address
 func (this *Controller) Create(ctx iris.Context) {
+	var returnStatus, success = 200, true
+	var messages = []string{}
+
 	param := blockOutput{}
 	ctx.ReadJSON(&param)
 
-	var success, returnStatus = true, 200
-	var message = []string{}
-
 	if len(param.Requestor) == 0 {
-		returnStatus = http.StatusPreconditionRequired
-		message = append(message, "Requestor cannot be empty")
-		success = false
+		returnStatus, success = helper.MandatoryErrorMessage("Requestor", &messages)
 	}
 
 	if len(param.Target) == 0 {
-		returnStatus = http.StatusPreconditionRequired
-		message = append(message, "Target cannot be empty")
-		success = false
+		returnStatus, success = helper.MandatoryErrorMessage("Target", &messages)
+	}
+
+	if helper.ValidateEMail(param.Requestor) && len(param.Requestor) > 0 {
+		returnStatus, success = helper.InvalidFormatMessage("Requestor", "email(mail@domain.com)", &messages)
+	}
+
+	if helper.ValidateEMail(param.Target) && len(param.Target) > 0 {
+		returnStatus, success = helper.InvalidFormatMessage("Target", "email(mail@domain.com)", &messages)
 	}
 
 	if len(param.Requestor) > 0 && len(param.Target) > 0 && param.Requestor == param.Target {
-		returnStatus = http.StatusPreconditionFailed
-		message = append(message, "Requestor and Target email cannot be the same")
-		success = false
+		returnStatus, success = helper.CustomPreconditionErrorMessage("Requestor and Target email cannot be the same", &messages)
 	}
 
 	if success {
@@ -53,15 +55,11 @@ func (this *Controller) Create(ctx iris.Context) {
 		userModel2 := this.DB.Where("email = ?", param.Target).First(&user2)
 
 		if userModel1.RecordNotFound() {
-			returnStatus = http.StatusNotFound
-			message = append(message, fmt.Sprintf("Email %s not found", param.Requestor))
-			success = false
+			returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Requestor), &messages)
 		}
 
 		if userModel2.RecordNotFound() {
-			returnStatus = http.StatusNotFound
-			message = append(message, fmt.Sprintf("Email %s not found", param.Target))
-			success = false
+			returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Target), &messages)
 		}
 
 		if success {
@@ -79,9 +77,7 @@ func (this *Controller) Create(ctx iris.Context) {
 					userBlock.CreatedAt = time.Now()
 					userBlock.UpdatedAt = time.Now()
 					if err := this.DB.Create(&userBlock).Error; err != nil {
-						returnStatus = http.StatusInternalServerError
-						message = append(message, err.Error())
-						success = false
+						returnStatus, success = helper.UndefinedErrorMessage(err.Error(), &messages)
 					}
 
 					if success {
@@ -92,16 +88,14 @@ func (this *Controller) Create(ctx iris.Context) {
 					}
 				}
 			} else {
-				returnStatus = http.StatusPreconditionFailed
-				message = append(message, fmt.Sprintf("Email %s already blocked %s", param.Requestor, param.Target))
-				success = false
+				returnStatus, success = helper.CustomPreconditionErrorMessage(fmt.Sprintf("Email %s is blocked by %s", param.Requestor, param.Target), &messages)
 			}
 		}
 	}
 
 	ctx.StatusCode(returnStatus)
 	ctx.JSON(iris.Map{
-		"message": message,
+		"messages": messages,
 		"success": success,
 	})
 }

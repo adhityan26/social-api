@@ -17,10 +17,10 @@ import (
 )
 
 var (
-	server = test.Setup()
+	server = test.Create()
 )
 
-func TestBlockUser(t *testing.T) {
+func TestMessageUser(t *testing.T) {
 	defer server.DB.Close()
 	controller := &message.Routes{DB: server.DB, RoutesPrefix: server.RoutePrefix}
 	controller.Handler(server.App)
@@ -41,14 +41,14 @@ func TestBlockUser(t *testing.T) {
 
 	//init test user
 	newUser := models.User{
-		Name: "test",
+		Name:  "test",
 		Email: "test@mail.com",
 	}
 
 	for i := 0; i < 10; i++ {
 		dataUser := iris.Map{
-			"name": newUser.Name + "_" + fmt.Sprint(i),
-			"email": "mail_" + fmt.Sprint(i) + "_" + newUser.Email,
+			"name":  newUser.Name + "_" + fmt.Sprint(i),
+			"email": "message_mail_" + fmt.Sprint(i) + "_" + newUser.Email,
 		}
 		e.POST(server.RoutePrefix + "/user").
 			WithJSON(dataUser).
@@ -59,18 +59,18 @@ func TestBlockUser(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		user := models.User{}
 
-		server.DB.Where("email = ?", "mail_" + fmt.Sprint(i) + "_" + newUser.Email).First(&user)
+		server.DB.Where("email = ?", "message_mail_"+fmt.Sprint(i)+"_"+newUser.Email).First(&user)
 
 		userList = append(userList, user)
 	}
 
 	e.POST(server.RoutePrefix + "/block").
 		WithJSON(iris.Map{"requestor": userList[0].Email, "target": userList[1].Email}).
-			Expect().Body().Contains("\"success\":true")
+		Expect().Body().Contains("\"success\":true")
 
 	for i := 1; i < 5; i++ {
 		e.POST(server.RoutePrefix + "/connection").
-			WithJSON(iris.Map{"friends": [2]string{userList[0].Email, userList[i + 1].Email}}).
+			WithJSON(iris.Map{"friends": [2]string{userList[0].Email, userList[i+1].Email}}).
 			Expect().Body().Contains("\"success\":true")
 	}
 
@@ -85,12 +85,16 @@ func TestBlockUser(t *testing.T) {
 		Expect().Body().Contains("\"success\":true")
 
 	e.POST(server.RoutePrefix + "/message").
+		WithJSON(iris.Map{"sender": "aaa", "text": "Hello adhityanugraha@gmail.com, farahbellanadia@gmail.com, mail_0_test@mail.com, mail_1_test@mail.com "}).
+		Expect().Body().Contains("\"success\":false")
+
+	e.POST(server.RoutePrefix + "/message").
 		WithJSON(iris.Map{"sender": userList[0].Email, "text": "Hello adhityanugraha@gmail.com, farahbellanadia@gmail.com, mail_0_test@mail.com, mail_1_test@mail.com "}).
 		Expect().Body().Contains("mail_2_test@mail.com")
 
 	e.POST(server.RoutePrefix + "/message").
-		WithJSON(iris.Map{"sender": userList[6].Email, "text": "Hello mail_0_test@mail.com"}).
-		Expect().Body().Contains("mail_1_test@mail.com")
+		WithJSON(iris.Map{"sender": userList[6].Email, "text": "Hello message_mail_0_test@mail.com"}).
+		Expect().Body().Contains("message_mail_1_test@mail.com")
 
 	e.POST(server.RoutePrefix + "/message").
 		WithJSON(iris.Map{"sender": userList[1].Email + "a", "text": "Hello"}).

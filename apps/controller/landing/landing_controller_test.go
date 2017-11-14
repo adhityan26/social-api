@@ -9,9 +9,9 @@ import (
 	"social-api/apps/test"
 )
 
-var server = test.Setup()
+var server = test.Create()
 
-func TestLoadError(t *testing.T) {
+func TestLoadLanding(t *testing.T) {
 	controller := &landing.Routes{DB: server.DB, RoutesPrefix: "/api/v1"}
 	controller.Handler(server.App)
 

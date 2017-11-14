@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	server = test.Setup()
+	server = test.Create()
 )
 
 func TestCreateUser(t *testing.T) {
@@ -24,13 +24,13 @@ func TestCreateUser(t *testing.T) {
 	e := httptest.New(t, server.App)
 
 	newUser := iris.Map{
-		"name": "test",
-		"email": "test@mail.com",
+		"name":  "test",
+		"email": "new_test@mail.com",
 	}
 
 	e.GET(server.RoutePrefix + "/user").
 		WithQueryObject(iris.Map{"email": newUser["email"]}).
-			Expect().Body().Contains("User not found")
+		Expect().Body().Contains("User is not found")
 
 	e.GET(server.RoutePrefix + "/user/1").Expect().Status(httptest.StatusNotFound)
 	e.GET(server.RoutePrefix + "/user/op").Expect().Status(httptest.StatusPreconditionFailed)
@@ -40,7 +40,7 @@ func TestCreateUser(t *testing.T) {
 
 	e.POST(server.RoutePrefix + "/user").
 		WithJSON(newUser).
-			Expect().Body().Contains(newUser["email"].(string))
+		Expect().Body().Contains(newUser["email"].(string))
 
 	var user = models.User{
 		Email: newUser["email"].(string),
@@ -53,7 +53,7 @@ func TestCreateUser(t *testing.T) {
 
 	e.GET(server.RoutePrefix + "/user").
 		WithQueryObject(iris.Map{"email": "test", "name": "Te", "status": "1"}).
-			Expect().Body().Contains("data")
+		Expect().Body().Contains("user")
 
 	e.GET(server.RoutePrefix + "/user/" + fmt.Sprint(user.Id)).
 		Expect().Status(httptest.StatusOK)
@@ -62,14 +62,21 @@ func TestCreateUser(t *testing.T) {
 		WithJSON(newUser).
 		Expect().Status(httptest.StatusConflict)
 
+	e.POST(server.RoutePrefix + "/user").
+		WithJSON(iris.Map{
+			"email": "abc",
+			"name": "abc",
+		}).
+		Expect().Status(httptest.StatusPreconditionFailed)
+
 	updateUser := iris.Map{
 		"status": "0",
-		"name": user.Name + "-1",
+		"name":   user.Name + "-1",
 	}
 
 	e.PUT(server.RoutePrefix + "/user/0").
 		WithJSON(updateUser).
-		Expect().Body().Contains("User not found")
+		Expect().Body().Contains("User is not found")
 
 	e.PUT(server.RoutePrefix + "/user/" + fmt.Sprint(user.Id)).
 		WithJSON(updateUser).
@@ -90,7 +97,7 @@ func TestCreateUser(t *testing.T) {
 	}
 
 	e.DELETE(server.RoutePrefix + "/user/0").
-		Expect().Body().Contains("User not found")
+		Expect().Body().Contains("User is not found")
 
 	e.DELETE(server.RoutePrefix + "/user/" + fmt.Sprint(user.Id)).
 		Expect().Body().Contains("deleted successfully")

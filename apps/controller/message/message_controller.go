@@ -5,11 +5,11 @@ package message
 import (
 	"github.com/kataras/iris"
 	"github.com/jinzhu/gorm"
-	"net/http"
 	"fmt"
 	"social-api/apps/models"
 	"time"
 	"regexp"
+	"social-api/apps/helper"
 )
 
 type Controller struct {
@@ -18,27 +18,27 @@ type Controller struct {
 
 type messageOutput struct {
 	Sender string `json: sender`
-	Text string `json: text`
+	Text   string `json: text`
 }
 
 // Create message and view list user that can receive update
 func (this *Controller) Create(ctx iris.Context) {
+	var returnStatus, success = 200, true
+	var messages = []string{}
+
 	param := messageOutput{}
 	ctx.ReadJSON(&param)
 
-	var success, returnStatus = true, 200
-	var message = []string{}
-
 	if len(param.Sender) == 0 {
-		returnStatus = http.StatusPreconditionRequired
-		message = append(message, "Sender cannot be empty")
-		success = false
+		returnStatus, success = helper.MandatoryErrorMessage("Sender", &messages)
 	}
 
 	if len(param.Text) == 0 {
-		returnStatus = http.StatusPreconditionRequired
-		message = append(message, "Text cannot be empty")
-		success = false
+		returnStatus, success = helper.MandatoryErrorMessage("Text", &messages)
+	}
+
+	if helper.ValidateEMail(param.Sender) && len(param.Sender) > 0 {
+		returnStatus, success = helper.InvalidFormatMessage("Sender", "email(mail@domain.com)", &messages)
 	}
 
 	if success {
@@ -46,9 +46,7 @@ func (this *Controller) Create(ctx iris.Context) {
 		userModel1 := this.DB.Where("email = ?", param.Sender).First(&user)
 
 		if userModel1.RecordNotFound() {
-			returnStatus = http.StatusNotFound
-			message = append(message, fmt.Sprintf("Email %s not found", param.Sender))
-			success = false
+			returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Sender), &messages)
 		}
 
 		if success {
@@ -65,8 +63,8 @@ func (this *Controller) Create(ctx iris.Context) {
 
 			var followers []models.User
 			this.DB.
-				Where("(exists(select 'x' from connections c where c.user_id = ? and c.friend_id = users.id) or " +
-				"exists(select 'x' from subscribes s where s.target_id = ? and s.requestor_id = users.id) or " +
+				Where("(exists(select 'x' from connections c where c.user_id = ? and c.friend_id = users.id) or "+
+				"exists(select 'x' from subscribes s where s.target_id = ? and s.requestor_id = users.id) or "+
 				"(users.email in (?)))", user.Id, user.Id, listMention).
 				Where("not exists(select 'x' from blocks b where b.requestor_id = ? and b.target_id = users.id)", user.Id).
 				Find(&followers)
@@ -82,29 +80,25 @@ func (this *Controller) Create(ctx iris.Context) {
 				userMessage.CreatedAt = time.Now()
 				userMessage.UpdatedAt = time.Now()
 				if err := this.DB.Create(&userMessage).Error; err != nil {
-					returnStatus = http.StatusInternalServerError
-					message = append(message, err.Error())
-					success = false
+					returnStatus, success = helper.UndefinedErrorMessage(err.Error(), &messages)
 				}
 
 				if success {
 					ctx.JSON(iris.Map{
-						"success": true,
+						"success":    true,
 						"recipients": listEmailSent,
 					})
 					return
 				}
 			} else {
-				returnStatus = http.StatusPreconditionFailed
-				message = append(message, "No followers/mention email found")
-				success = false
+				returnStatus, success = helper.RecordNotFoundMessage("Follower/mention", &messages)
 			}
 		}
 	}
 
 	ctx.StatusCode(returnStatus)
 	ctx.JSON(iris.Map{
-		"message": message,
+		"message": messages,
 		"success": success,
 	})
 }

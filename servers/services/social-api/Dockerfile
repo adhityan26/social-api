@@ -1,4 +1,4 @@
-FROM golang:1.7-alpine
+FROM golang:1.9-alpine
 
 ARG APP_NAME
 ENV APP_NAME=$APP_NAME
@@ -27,8 +27,6 @@ ADD config/reflex.conf /go/_tools
 
 RUN chmod +x /go/_tools/build.sh
 
-# Add startup script
-#ADD ./startup.sh $GOPATH/startup.sh
-#ENTRYPOINT $GOPATH/startup.sh
+RUN go get -v github.com/cespare/reflex
 
 CMD ["reflex","-c","/go/_tools/reflex.conf"]

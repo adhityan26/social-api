@@ -5,8 +5,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"social-api/apps/models"
 	"time"
-	"net/http"
-	"fmt"
+	"social-api/apps/helper"
 )
 
 type Controller struct {
@@ -15,6 +14,9 @@ type Controller struct {
 
 // View list user by criteria
 func (this *Controller) Index(ctx iris.Context) {
+	var returnStatus, success = 200, true
+	var messages []string
+	
 	var listUser []models.User
 
 	userParam := ctx.URLParams()
@@ -22,11 +24,11 @@ func (this *Controller) Index(ctx iris.Context) {
 	query := this.DB
 
 	if len(userParam["email"]) > 0 {
-		query = query.Where("email like ?", "%" + userParam["email"] + "%")
+		query = query.Where("email like ?", "%"+userParam["email"]+"%")
 	}
 
 	if len(userParam["name"]) > 0 {
-		query = query.Where("name like ?", "%" + userParam["name"] + "%")
+		query = query.Where("name like ?", "%"+userParam["name"]+"%")
 	}
 
 	if len(userParam["status"]) > 0 {
@@ -34,210 +36,213 @@ func (this *Controller) Index(ctx iris.Context) {
 	}
 	query.Find(&listUser)
 
-	if len(listUser) == 0 {
-		ctx.StatusCode(http.StatusNotFound)
+	if len(listUser) > 0 {
 		ctx.JSON(iris.Map{
-			"message": "User not found",
+			"users": listUser,
+			"success": success,
 		})
 		return
+	} else {
+		returnStatus, success = helper.RecordNotFoundMessage("User", &messages)
 	}
 
+	ctx.StatusCode(returnStatus)
 	ctx.JSON(iris.Map{
-		"data": listUser,
+		"message": messages,
+		"success": success,
 	})
 }
 
 // View detail user by id
 func (this *Controller) Show(ctx iris.Context) {
+	var returnStatus, success = 200, true
+	var messages []string
+
 	id, err := ctx.Params().GetInt("id")
 
 	if err != nil {
-		ctx.StatusCode(http.StatusPreconditionFailed)
-		ctx.JSON(iris.Map{
-			"message":"Invalid format",
-			"trace":err.Error(),
-		})
-		return
+		returnStatus, success = helper.InvalidFormatMessage("Id", "Integer", &messages)
 	}
 
-	var user models.User
+	if success {
+		var user models.User
 
-	if this.DB.First(&user, id).RecordNotFound() {
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(map[string]string {
-			"message":"User not found",
-		})
-		return
+		if this.DB.First(&user, id).RecordNotFound() {
+			returnStatus, success = helper.RecordNotFoundMessage("User", &messages)
+		}
+
+		if success {
+			var userOutput models.UserOutput
+			userOutput.Id = user.Id
+			userOutput.Name = user.Name
+			userOutput.Email = user.Email
+			if user.Status {
+				userOutput.Status = "true"
+			} else {
+				userOutput.Status = "false"
+			}
+			userOutput.CreatedAt = user.CreatedAt
+			userOutput.UpdatedAt = user.UpdatedAt
+
+			ctx.JSON(iris.Map{
+				"user": userOutput,
+				"success": success,
+			})
+			
+			return
+		}
 	}
 
-	var userOutput models.UserOutput
-	userOutput.Id = user.Id
-	userOutput.Name = user.Name
-	userOutput.Email = user.Email
-	if user.Status {
-		userOutput.Status = "true"
-	} else {
-		userOutput.Status = "false"
-	}
-	userOutput.CreatedAt = user.CreatedAt
-	userOutput.UpdatedAt = user.UpdatedAt
-
-	ctx.JSON(userOutput)
+	ctx.StatusCode(returnStatus)
+	ctx.JSON(iris.Map{
+		"message": messages,
+		"success": success,
+	})
 }
 
 // Create new user
 func (this *Controller) Create(ctx iris.Context) {
-	var user models.User
+	var returnStatus, success = 200, true
+	var messages []string
+
 	var userParam models.UserOutput
 	ctx.ReadJSON(&userParam)
-	user.Name = userParam.Name
-	user.Email = userParam.Email
-	user.Status = true
-	user.UpdatedAt = time.Now()
-	user.CreatedAt = time.Now()
-	var success, returnStatus = true, 200
-	var message = []string{}
 
-	if len(user.Email) == 0 {
-		returnStatus = http.StatusPreconditionRequired
-		message = append(message, "Email cannot be empty")
-		success = false
+	if len(userParam.Email) == 0 {
+		returnStatus, success = helper.MandatoryErrorMessage("Email", &messages)
 	}
 
-	if len(user.Name) == 0 {
-		returnStatus = http.StatusPreconditionRequired
-		message = append(message, "Name cannot be empty")
-		success = false
+	if len(userParam.Name) == 0 {
+		returnStatus, success = helper.MandatoryErrorMessage("Name", &messages)
+	}
+
+	if helper.ValidateEMail(userParam.Email) && len(userParam.Email) > 0 {
+		returnStatus, success = helper.InvalidFormatMessage("Email", "email(mail@domain.com)", &messages)
 	}
 
 	if success {
-		var checkUser = models.User{
-			Email: user.Email,
-		}
-
-		userModel := this.DB.Where("email = ?", user.Email).First(&checkUser)
+		userModel := this.DB.Where("email = ?", userParam.Email).First(&models.User{})
 
 		if userModel.RecordNotFound() {
+			var user models.User
+			user.Name = userParam.Name
+			user.Email = userParam.Email
+			user.Status = true
+			user.UpdatedAt = time.Now()
+			user.CreatedAt = time.Now()
+			
 			if err := this.DB.Create(&user).Error; err != nil {
-				returnStatus = http.StatusInternalServerError
-				message = append(message, err.Error())
-				success = false
+				returnStatus, success = helper.UndefinedErrorMessage(err.Error(), &messages)
 			} else {
 				ctx.JSON(iris.Map{
-					"user": user,
+					"user":    user,
 					"message": "User created successfully",
 					"success": true,
 				})
 				return
 			}
 		} else {
-			returnStatus = http.StatusConflict
-			message = append(message, fmt.Sprintf("Email %s is already exists", user.Email))
-			success = false
+			returnStatus, success = helper.DuplicateErrorMessage("Email", userParam.Email, &messages)
 		}
 	}
 
 	ctx.StatusCode(returnStatus)
 	ctx.JSON(iris.Map{
-		"message": message,
+		"message": messages,
 		"success": success,
 	})
 }
 
 // update user by user id
 func (this *Controller) Update(ctx iris.Context) {
+	var returnStatus, success = 200, true
+	var messages []string
+
+	var userParam models.UserOutput
+	ctx.ReadJSON(&userParam)
+	
 	id, err := ctx.Params().GetInt("id")
 
 	if err != nil {
-		ctx.StatusCode(http.StatusPreconditionFailed)
-		ctx.JSON(iris.Map{
-			"message":"Invalid format",
-			"trace":err.Error(),
-			"success": false,
-		})
-		return
+		returnStatus, success = helper.InvalidFormatMessage("Id", "integer", &messages)
 	}
 
-	var user = models.User{
-		Id: int32(id),
+	if success {
+		var user = models.User{
+			Id: int32(id),
+		}
+
+		userModel := this.DB.First(&user, user.Id)
+
+		if userModel.RecordNotFound() {
+			returnStatus, success = helper.RecordNotFoundMessage("User", &messages)
+		} else {
+			if len(userParam.Name) > 0 {
+				user.Name = userParam.Name
+			}
+
+			if len(userParam.Status) > 0 {
+				user.Status = userParam.Status == "1"
+			}
+
+			if err := this.DB.Save(&user).Error; err != nil {
+				returnStatus, success = helper.UndefinedErrorMessage("Failed to update user. " + err.Error(), &messages)
+			} else {
+				ctx.JSON(iris.Map{
+					"message": "User updated successfully",
+					"user":    user,
+					"success": success,
+				})
+
+				return
+			}
+		}
 	}
 
-	userModel := this.DB.First(&user, user.Id)
-
-	if userModel.RecordNotFound() {
-		ctx.JSON(iris.Map{
-			"message": "User not found",
-			"success": false,
-		})
-	} else {
-		var userParam models.UserOutput
-		ctx.ReadJSON(&userParam)
-		if len(userParam.Name) > 0 {
-			user.Name = userParam.Name
-		}
-
-		if len(userParam.Status) > 0 {
-			user.Status = userParam.Status == "1"
-		}
-
-		if err := this.DB.Save(&user).Error; err != nil {
-			ctx.StatusCode(http.StatusInternalServerError)
-			ctx.JSON(iris.Map{
-				"message": "Failed to update user",
-				"trace": err.Error(),
-				"success": false,
-			})
-			return
-		}
-
-		ctx.JSON(iris.Map{
-			"message": "User updated successfully",
-			"user": user,
-			"success": true,
-		})
-	}
+	ctx.StatusCode(returnStatus)
+	ctx.JSON(iris.Map{
+		"message": messages,
+		"success": success,
+	})
 }
 
 // Remove user by id
 func (this *Controller) Remove(ctx iris.Context) {
+	var returnStatus, success = 200, true
+	var messages []string
+
 	id, err := ctx.Params().GetInt("id")
 
 	if err != nil {
-		ctx.StatusCode(http.StatusPreconditionFailed)
-		ctx.JSON(iris.Map{
-			"message":"Invalid format",
-			"trace":err.Error(),
-			"success": false,
-		})
-		return
+		returnStatus, success = helper.InvalidFormatMessage("Id", "integer", &messages)
 	}
 
-	var user = models.User{
-		Id: int32(id),
-	}
-
-	userModel := this.DB.First(&user, user.Id)
-
-	if userModel.RecordNotFound() {
-		ctx.JSON(iris.Map{
-			"message": "User not found",
-			"success": false,
-		})
-		return
-	} else {
-		if err := this.DB.Delete(user).Error; err != nil {
-			ctx.StatusCode(http.StatusInternalServerError)
-			ctx.JSON(iris.Map{
-				"message": "Failed to delete user",
-				"trace": err.Error(),
-				"success": false,
-			})
-			return
+	if success {
+		var user = models.User{
+			Id: int32(id),
 		}
 
-		ctx.JSON(iris.Map{
-			"message": "User deleted successfully",
-			"success": true,
-		})
+		userModel := this.DB.First(&user, user.Id)
+
+		if userModel.RecordNotFound() {
+			returnStatus, success = helper.RecordNotFoundMessage("User", &messages)
+		} else {
+			if err := this.DB.Delete(user).Error; err != nil {
+				returnStatus, success = helper.UndefinedErrorMessage("Failed to delete user. " + err.Error(), &messages)
+			} else {
+				ctx.JSON(iris.Map{
+					"message": "User deleted successfully",
+					"success": true,
+				})
+
+				return
+			}
+		}
 	}
+
+	ctx.StatusCode(returnStatus)
+	ctx.JSON(iris.Map{
+		"message": messages,
+		"success": success,
+	})
 }

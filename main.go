@@ -1,28 +1,26 @@
 package main
 
 import (
-	"github.com/joho/godotenv"
 	"github.com/kataras/iris"
 	"os"
 	"social-api/apps"
-	"github.com/jinzhu/gorm"
 
-	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"social-api/apps/models"
+	"social-api/apps/helper"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	godotenv.Load()
 
-	conn := os.Getenv("USERNAME_DB") + ":" + os.Getenv("PASSWORD_DB") + "@tcp(" + os.Getenv("DATABASE_HOST") + ":" + os.Getenv("DATABASE_PORT") + ")/" + os.Getenv("DATABASE_NAME") + "?charset=utf8&parseTime=True&loc=Local"
-	db, err := gorm.Open(os.Getenv("DATABASE_TYPE"), conn)
+	db := helper.SetupDB()
 
-	if err != nil {
-		panic(err)
-	}
+	// close db connection after application is terminated
 	defer db.Close()
 
+	// migrate database using models
 	db.AutoMigrate(&models.User{}, &models.Connection{}, &models.Subscribe{}, &models.Block{}, &models.Message{})
 
-	(&apps.Routes{DB: db}).CreateApp().Run(iris.Addr(os.Getenv("HOST") + ":" + os.Getenv("PORT")), iris.WithoutServerError(iris.ErrServerClosed))
+	// serve application
+	(&apps.Routes{DB: db}).CreateApp().Run(iris.Addr(os.Getenv("HOST")+":"+os.Getenv("PORT")), iris.WithoutServerError(iris.ErrServerClosed))
 }
