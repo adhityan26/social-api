@@ -199,3 +199,41 @@ It means the dependency loader is failed to fetch all the dependency, you can ma
     
 # Unit Test Result
 ![N|Solid](http://image.ibb.co/j7Rysb/image.png)
+
+### Detail
+Detail function coverage
+
+    social-api\apps\controller\block\block_controller.go:24:        Create          97.6%
+    social-api\apps\controller\block\block_controller.go:104:       Remove          94.3%
+    social-api\apps\controller\block\block_routes.go:14:            Handler         100.0%
+    total:                                                          (statements)    96.3%
+    
+    social-api\apps\controller\connection\connection_controller.go:28:      Index                   100.0%
+    social-api\apps\controller\connection\connection_controller.go:73:      Create                  90.7%
+    social-api\apps\controller\connection\connection_controller.go:184:     CreateConnection        77.8%
+    social-api\apps\controller\connection\connection_controller.go:203:     Remove                  88.9%
+    social-api\apps\controller\connection\connection_controller.go:292:     RemoveConnection        50.0%
+    social-api\apps\controller\connection\connection_controller.go:306:     Common                  100.0%
+    social-api\apps\controller\connection\connection_routes.go:14:          Handler                 100.0%
+    total:                                                                  (statements)            91.7%
+    
+    social-api\apps\controller\landing\landing_controller.go:14:    Index           100.0%
+    social-api\apps\controller\landing\landing_routes.go:14:        Handler         100.0%
+    total:                                                          (statements)    100.0%
+    
+    social-api\apps\controller\message\message_controller.go:25:    Create          97.6%
+    social-api\apps\controller\message\message_routes.go:14:        Handler         100.0%
+    total:                                                          (statements)    97.8%
+    
+    social-api\apps\controller\subscribe\subscribe_controller.go:24:        Create          93.5%
+    social-api\apps\controller\subscribe\subscribe_controller.go:115:       Remove          88.9%
+    social-api\apps\controller\subscribe\subscribe_routes.go:14:            Handler         100.0%
+    total:                                                                  (statements)    92.0%
+    
+    social-api\apps\controller\user\user_controller.go:16:  Index           100.0%
+    social-api\apps\controller\user\user_controller.go:57:  Show            95.7%
+    social-api\apps\controller\user\user_controller.go:104: Create          96.2%
+    social-api\apps\controller\user\user_controller.go:157: Update          95.5%
+    social-api\apps\controller\user\user_controller.go:210: Remove          93.8%
+    social-api\apps\controller\user\user_routes.go:14:      Handler         100.0%
+    total:                                                  (statements)    96.5%

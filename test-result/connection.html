@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<!-- saved from url=(0075)file:///C:/Users/Adit/AppData/Local/Temp/cover163927215/coverage.html#file0 -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">social-api\apps\controller\connection\connection_controller.go (91.3%)</option>
+				
+				<option value="file1">social-api\apps\controller\connection\connection_routes.go (100.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: block;">// Package connection is used to handle
+// user connection friend by email address
+package connection
+
+import (
+        "github.com/kataras/iris"
+        "github.com/jinzhu/gorm"
+        "fmt"
+        "social-api/apps/models"
+        "time"
+        "social-api/apps/helper"
+        "net/http"
+)
+
+type Controller struct {
+        DB *gorm.DB
+}
+
+type connectionOutput struct {
+        Friends []string `json: friends`
+}
+
+type friendList struct {
+        Email string `json: email`
+}
+
+// View list friends by email address
+func (this *Controller) Index(ctx iris.Context) <span class="cov8" title="1">{
+        var returnStatus, success = 200, true
+        var messages = []string{}
+
+        param := friendList{}
+        ctx.ReadJSON(&amp;param)
+
+        if len(param.Email) == 0 </span><span class="cov8" title="1">{
+                returnStatus, success = helper.MandatoryErrorMessage("Email", &amp;messages)
+        }</span>
+
+        <span class="cov8" title="1">if helper.ValidateEMail(param.Email) &amp;&amp; len(param.Email) &gt; 0 </span><span class="cov8" title="1">{
+                returnStatus, success = helper.InvalidFormatMessage("Email", "email(mail@domain.com)", &amp;messages)
+        }</span>
+
+        <span class="cov8" title="1">if success </span><span class="cov8" title="1">{
+                var user = models.User{}
+                userModel := this.DB.Where("email = ?", param.Email).
+                        Preload("Friends").
+                        Preload("Friends.UserDetail").First(&amp;user)
+                if userModel.RecordNotFound() </span><span class="cov8" title="1">{
+                        returnStatus, success = helper.RecordNotFoundMessage("User", &amp;messages)
+                }</span><span class="cov8" title="1"> else {
+                        listEmail := []string{}
+                        for _, friend := range user.Friends </span><span class="cov8" title="1">{
+                                listEmail = append(listEmail, friend.UserDetail.Email)
+                        }</span>
+
+                        <span class="cov8" title="1">ctx.JSON(iris.Map{
+                                "friends": listEmail,
+                                "count":   len(user.Friends),
+                                "success": success,
+                        })
+                        return</span>
+                }
+        }
+
+        <span class="cov8" title="1">ctx.StatusCode(returnStatus)
+        ctx.JSON(iris.Map{
+                "messages": messages,
+                "success":  success,
+        })</span>
+}
+
+// Create connection between two email address
+func (this *Controller) Create(ctx iris.Context) <span class="cov8" title="1">{
+        var returnStatus, success = http.StatusOK, true
+        var messages = []string{}
+
+        param := connectionOutput{}
+        ctx.ReadJSON(&amp;param)
+
+        if len(param.Friends) &lt; 2 </span><span class="cov8" title="1">{
+                returnStatus, success = helper.CustomPreconditionRequiredErrorMessage("Must provide 2 email", &amp;messages)
+        }</span>
+
+        <span class="cov8" title="1">if (len(param.Friends) == 2) &amp;&amp; (param.Friends[0] == param.Friends[1]) </span><span class="cov8" title="1">{
+                returnStatus, success = helper.CustomPreconditionErrorMessage("Email cannot be the same", &amp;messages)
+        }</span>
+
+        <span class="cov8" title="1">if len(param.Friends) &gt; 0 &amp;&amp; helper.ValidateEMail(param.Friends[0]) &amp;&amp; len(param.Friends[0]) &gt; 0 </span><span class="cov8" title="1">{
+                returnStatus, success = helper.InvalidFormatMessage("Email 1", "email(mail@domain.com)", &amp;messages)
+        }</span>
+
+        <span class="cov8" title="1">if len(param.Friends) &gt; 1 &amp;&amp; helper.ValidateEMail(param.Friends[1]) &amp;&amp; len(param.Friends[1]) &gt; 0 </span><span class="cov8" title="1">{
+                returnStatus, success = helper.InvalidFormatMessage("Email 2", "email(mail@domain.com)", &amp;messages)
+        }</span>
+
+        <span class="cov8" title="1">if success </span><span class="cov8" title="1">{
+                var user1 = models.User{}
+                userModel1 := this.DB.Where("email = ?", param.Friends[0]).First(&amp;user1)
+                var user2 = models.User{}
+                userModel2 := this.DB.Where("email = ?", param.Friends[1]).First(&amp;user2)
+
+                if userModel1.RecordNotFound() </span><span class="cov8" title="1">{
+                        returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Friends[0]), &amp;messages)
+                }</span>
+
+                <span class="cov8" title="1">if userModel2.RecordNotFound() </span><span class="cov8" title="1">{
+                        returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Friends[1]), &amp;messages)
+                }</span>
+
+                <span class="cov8" title="1">if success </span><span class="cov8" title="1">{
+                        var checkBlocked1 models.Block
+                        checkBlockedModel1 := this.DB.
+                                Where("requestor_id = ? and target_id = ?", user1.Id, user2.Id).
+                                First(&amp;checkBlocked1)
+
+                        var checkBlocked2 models.Block
+                        checkBlockedModel2 := this.DB.
+                                Where("requestor_id = ? and target_id = ?", user2.Id, user1.Id).
+                                First(&amp;checkBlocked2)
+
+                        if checkBlockedModel1.RecordNotFound() &amp;&amp; checkBlockedModel2.RecordNotFound() </span><span class="cov8" title="1">{
+                                var checkFriend1 models.Connection
+                                checkFriendModel1 := this.DB.
+                                        Where("user_id = ?", user1.Id).
+                                        Where("friend_id = ?", user2.Id).
+                                        First(&amp;checkFriend1)
+
+                                var checkFriend2 models.Connection
+                                checkFriendModel2 := this.DB.
+                                        Where("user_id = ?", user2.Id).
+                                        Where("friend_id = ?", user1.Id).
+                                        First(&amp;checkFriend2)
+
+                                if checkFriendModel1.RecordNotFound() &amp;&amp; checkFriendModel2.RecordNotFound() </span><span class="cov8" title="1">{
+                                        tx := this.DB.Begin()
+                                        newConnection := make(chan map[int]bool)
+
+                                        go (&amp;Controller{DB: tx}).
+                                                CreateConnection(user1, user2, messages, newConnection)
+
+                                        go (&amp;Controller{DB: tx}).
+                                                CreateConnection(user2, user1, messages, newConnection)
+
+                                        new, ok := &lt;-newConnection
+                                        for !ok </span><span class="cov0" title="0">{
+                                                for r, s := range new </span><span class="cov0" title="0">{
+                                                        if !s </span><span class="cov0" title="0">{
+                                                                returnStatus, success = r, s
+                                                        }</span>
+                                                }
+                                                <span class="cov0" title="0">new, ok = &lt;-newConnection</span>
+                                        }
+
+                                        <span class="cov8" title="1">if success </span><span class="cov8" title="1">{
+                                                tx.Commit()
+                                                ctx.JSON(iris.Map{
+                                                        "success": true,
+                                                })
+                                                return
+                                        }</span><span class="cov0" title="0"> else {
+                                                tx.Rollback()
+                                        }</span>
+                                }<span class="cov8" title="1"> else {
+                                        returnStatus, success = helper.CustomPreconditionErrorMessage(fmt.Sprintf("Email %s and %s is already friend", param.Friends[0], param.Friends[1]), &amp;messages)
+                                }</span>
+                        }<span class="cov8" title="1"> else {
+                                if !checkBlockedModel1.RecordNotFound() </span><span class="cov8" title="1">{
+                                        returnStatus, success = helper.CustomPreconditionErrorMessage(fmt.Sprintf("Email %s is blocked by %s", param.Friends[0], param.Friends[1]), &amp;messages)
+                                }</span>
+                                <span class="cov8" title="1">if !checkBlockedModel2.RecordNotFound() </span><span class="cov8" title="1">{
+                                        returnStatus, success = helper.CustomPreconditionErrorMessage(fmt.Sprintf("Email %s is blocked by %s", param.Friends[1], param.Friends[0]), &amp;messages)
+                                }</span>
+                        }
+                }
+        }
+
+        <span class="cov8" title="1">ctx.StatusCode(returnStatus)
+        ctx.JSON(iris.Map{
+                "messages": messages,
+                "success":  success,
+        })</span>
+}
+
+func (this *Controller) CreateConnection(user1 models.User, user2 models.User, messages []string, connection chan map[int]bool) <span class="cov8" title="1">{
+        userConnection := models.Connection{}
+        userConnection.UserId = user1.Id
+        userConnection.FriendId = user2.Id
+        userConnection.CreatedAt = time.Now()
+        userConnection.UpdatedAt = time.Now()
+        if err := this.DB.Create(&amp;userConnection).Error; err != nil </span><span class="cov0" title="0">{
+                r, s := helper.UndefinedErrorMessage(err.Error(), &amp;messages)
+                connection &lt;- map[int]bool {
+                        r: s,
+                }
+        }</span><span class="cov8" title="1"> else {
+                connection &lt;- map[int]bool {
+                        http.StatusOK: false,
+                }
+        }</span>
+}
+
+// Remove connection between two email address
+func (this *Controller) Remove(ctx iris.Context) <span class="cov8" title="1">{
+        var returnStatus, success = http.StatusOK, true
+        var messages = []string{}
+
+        param := connectionOutput{}
+        ctx.ReadJSON(&amp;param)
+
+        if len(param.Friends) &lt; 2 </span><span class="cov8" title="1">{
+                returnStatus, success = helper.CustomPreconditionRequiredErrorMessage("Must provide 2 email", &amp;messages)
+        }</span>
+
+        <span class="cov8" title="1">if (len(param.Friends) == 2) &amp;&amp; (param.Friends[0] == param.Friends[1]) </span><span class="cov8" title="1">{
+                returnStatus, success = helper.CustomPreconditionErrorMessage("Email cannot be the same", &amp;messages)
+        }</span>
+
+        <span class="cov8" title="1">if len(param.Friends) &gt; 0 &amp;&amp; helper.ValidateEMail(param.Friends[0]) &amp;&amp; len(param.Friends[0]) &gt; 0 </span><span class="cov8" title="1">{
+                returnStatus, success = helper.InvalidFormatMessage("Email 1", "email(mail@domain.com)", &amp;messages)
+        }</span>
+
+        <span class="cov8" title="1">if len(param.Friends) &gt; 1 &amp;&amp; helper.ValidateEMail(param.Friends[1]) &amp;&amp; len(param.Friends[1]) &gt; 0 </span><span class="cov8" title="1">{
+                returnStatus, success = helper.InvalidFormatMessage("Email 2", "email(mail@domain.com)", &amp;messages)
+        }</span>
+
+        <span class="cov8" title="1">if success </span><span class="cov8" title="1">{
+                var user1 = models.User{}
+                userModel1 := this.DB.Where("email = ?", param.Friends[0]).First(&amp;user1)
+                var user2 = models.User{}
+                userModel2 := this.DB.Where("email = ?", param.Friends[1]).First(&amp;user2)
+
+                if userModel1.RecordNotFound() </span><span class="cov8" title="1">{
+                        returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Friends[0]), &amp;messages)
+                }</span>
+
+                <span class="cov8" title="1">if userModel2.RecordNotFound() </span><span class="cov8" title="1">{
+                        returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Friends[1]), &amp;messages)
+                }</span>
+
+                <span class="cov8" title="1">if success </span><span class="cov8" title="1">{
+                        tx := this.DB.Begin()
+                        var checkFriend1 models.Connection
+                        friendConnection1 := tx.
+                                Where("user_id = ?", user1.Id).
+                                Where("friend_id = ?", user2.Id).
+                                First(&amp;checkFriend1)
+
+                        var checkFriend2 models.Connection
+                        friendConnection2 := tx.
+                                Where("user_id = ?", user2.Id).
+                                Where("friend_id = ?", user1.Id).
+                                First(&amp;checkFriend2)
+
+                        if !friendConnection1.RecordNotFound() &amp;&amp; !friendConnection2.RecordNotFound() </span><span class="cov8" title="1">{
+                                delConnection := make(chan map[int]bool)
+
+                                go (&amp;Controller{DB: friendConnection1}).RemoveConnection(messages, delConnection)
+                                go (&amp;Controller{DB: friendConnection2}).RemoveConnection(messages, delConnection)
+
+                                del, ok := &lt;-delConnection
+                                for !ok </span><span class="cov0" title="0">{
+                                        for r, s := range del </span><span class="cov0" title="0">{
+                                                if !s </span><span class="cov0" title="0">{
+                                                        returnStatus, success = r, s
+                                                }</span>
+                                        }
+                                        <span class="cov0" title="0">del, ok = &lt;-delConnection</span>
+                                }
+
+                                <span class="cov8" title="1">if success </span><span class="cov8" title="1">{
+                                        tx.Commit()
+                                        ctx.JSON(iris.Map{
+                                                "success": true,
+                                        })
+                                        return
+                                }</span><span class="cov0" title="0"> else {
+                                        tx.Rollback()
+                                }</span>
+                        }<span class="cov8" title="1"> else {
+                                returnStatus, success = helper.CustomPreconditionErrorMessage(fmt.Sprintf("Email %s and %s is not a friend", param.Friends[0], param.Friends[1]), &amp;messages)
+                        }</span>
+                }
+        }
+
+        <span class="cov8" title="1">ctx.StatusCode(returnStatus)
+        ctx.JSON(iris.Map{
+                "messages": messages,
+                "success":  success,
+        })</span>
+}
+
+func (this *Controller) RemoveConnection(messages []string, connection chan map[int]bool) <span class="cov8" title="1">{
+        if err := this.DB.Delete(&amp;models.Connection{}).Error; err != nil </span><span class="cov0" title="0">{
+                r, s := helper.UndefinedErrorMessage(err.Error(), &amp;messages)
+                connection &lt;- map[int]bool{
+                        r: s,
+                }
+        }</span><span class="cov8" title="1"> else {
+                connection &lt;- map[int]bool{
+                        http.StatusOK: true,
+                }
+        }</span>
+}
+
+// view common friend between teo emil address
+func (this *Controller) Common(ctx iris.Context) <span class="cov8" title="1">{
+        var returnStatus, success = 200, true
+        var messages = []string{}
+
+        param := connectionOutput{}
+        ctx.ReadJSON(&amp;param)
+
+        if len(param.Friends) &lt; 2 </span><span class="cov8" title="1">{
+                returnStatus, success = helper.CustomPreconditionErrorMessage("Must provide 2 email", &amp;messages)
+        }</span>
+
+        <span class="cov8" title="1">if (len(param.Friends) == 2) &amp;&amp; (param.Friends[0] == param.Friends[1]) </span><span class="cov8" title="1">{
+                returnStatus, success = helper.CustomPreconditionErrorMessage("Email cannot be the same", &amp;messages)
+        }</span>
+
+        <span class="cov8" title="1">if success </span><span class="cov8" title="1">{
+                var user1 = models.User{}
+                userModel1 := this.DB.Where("email = ?", param.Friends[0]).First(&amp;user1)
+                var user2 = models.User{}
+                userModel2 := this.DB.Where("email = ?", param.Friends[1]).First(&amp;user2)
+
+                if userModel1.RecordNotFound() </span><span class="cov8" title="1">{
+                        returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Friends[0]), &amp;messages)
+                }</span>
+
+                <span class="cov8" title="1">if userModel2.RecordNotFound() </span><span class="cov8" title="1">{
+                        returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Friends[1]), &amp;messages)
+                }</span>
+
+                <span class="cov8" title="1">if success </span><span class="cov8" title="1">{
+                        var userCommon []models.Connection
+                        connectionModel := this.DB.
+                                Where("user_id = ? and exists(select 'x' from connections c1 where c1.user_id = ? and c1.friend_id = connections.friend_id)", user1.Id, user2.Id).
+                                Preload("FriendDetail").Find(&amp;userCommon)
+
+                        if connectionModel.RecordNotFound() || len(userCommon) == 0 </span><span class="cov8" title="1">{
+                                returnStatus, success = helper.RecordNotFoundMessage("Common friend", &amp;messages)
+                        }</span><span class="cov8" title="1"> else {
+                                listEmail := []string{}
+                                for _, connection := range userCommon </span><span class="cov8" title="1">{
+                                        listEmail = append(listEmail, connection.FriendDetail.Email)
+                                }</span>
+
+                                <span class="cov8" title="1">ctx.JSON(iris.Map{
+                                        "friends": listEmail,
+                                        "count":   len(userCommon),
+                                        "success": success,
+                                })
+                                return</span>
+                        }
+                }
+        }
+
+        <span class="cov8" title="1">ctx.StatusCode(returnStatus)
+        ctx.JSON(iris.Map{
+                "messages": messages,
+                "success":  success,
+        })</span>
+}</pre>
+		
+		<pre class="file" id="file1" style="display: none">package connection
+
+import (
+        "github.com/kataras/iris"
+        "github.com/jinzhu/gorm"
+)
+
+type Routes struct {
+        DB           *gorm.DB
+        RoutesPrefix string
+}
+
+// Handle api routing for manage friends connection
+func (this *Routes) Handler(app *iris.Application) <span class="cov8" title="1">{
+        controller := Controller{DB: this.DB}
+        api := app.Party(this.RoutesPrefix + "/connection")
+        </span><span class="cov8" title="1">{
+                api.Post("/show", controller.Index)
+                api.Post("/", controller.Create)
+                api.Delete("/", controller.Remove)
+                api.Post("/common", controller.Common)
+        }</span>
+}
+</pre>
+		
+		</div>
+	
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+
+</body></html>

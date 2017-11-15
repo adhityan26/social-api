@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<!-- saved from url=(0075)file:///C:/Users/Adit/AppData/Local/Temp/cover383807559/coverage.html#file0 -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">social-api\apps\controller\message\message_controller.go (97.6%)</option>
+				
+				<option value="file1">social-api\apps\controller\message\message_routes.go (100.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: block;">// Package message is used to handle
+// sending user message
+package message
+
+import (
+        "github.com/kataras/iris"
+        "github.com/jinzhu/gorm"
+        "fmt"
+        "social-api/apps/models"
+        "time"
+        "regexp"
+        "social-api/apps/helper"
+)
+
+type Controller struct {
+        DB *gorm.DB
+}
+
+type messageOutput struct {
+        Sender string `json: sender`
+        Text   string `json: text`
+}
+
+// Create message and view list user that can receive update
+func (this *Controller) Create(ctx iris.Context) <span class="cov8" title="1">{
+        var returnStatus, success = 200, true
+        var messages = []string{}
+
+        param := messageOutput{}
+        ctx.ReadJSON(&amp;param)
+
+        if len(param.Sender) == 0 </span><span class="cov8" title="1">{
+                returnStatus, success = helper.MandatoryErrorMessage("Sender", &amp;messages)
+        }</span>
+
+        <span class="cov8" title="1">if len(param.Text) == 0 </span><span class="cov8" title="1">{
+                returnStatus, success = helper.MandatoryErrorMessage("Text", &amp;messages)
+        }</span>
+
+        <span class="cov8" title="1">if helper.ValidateEMail(param.Sender) &amp;&amp; len(param.Sender) &gt; 0 </span><span class="cov8" title="1">{
+                returnStatus, success = helper.InvalidFormatMessage("Sender", "email(mail@domain.com)", &amp;messages)
+        }</span>
+
+        <span class="cov8" title="1">if success </span><span class="cov8" title="1">{
+                var user = models.User{}
+                userModel1 := this.DB.Where("email = ?", param.Sender).First(&amp;user)
+
+                if userModel1.RecordNotFound() </span><span class="cov8" title="1">{
+                        returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Sender), &amp;messages)
+                }</span>
+
+                <span class="cov8" title="1">if success </span><span class="cov8" title="1">{
+                        listMentionMatch := regexp.MustCompile(`([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})`)
+                        listMentionTmp := listMentionMatch.FindAllString(param.Text, -1)
+                        var listMention []string
+                        var listEmailSent []string
+
+                        for _, mention := range listMentionTmp </span><span class="cov8" title="1">{
+                                if mention != user.Email </span><span class="cov8" title="1">{
+                                        listMention = append(listMention, mention)
+                                }</span>
+                        }
+
+                        <span class="cov8" title="1">var followers []models.User
+                        this.DB.
+                                Where("(exists(select 'x' from connections c where c.user_id = ? and c.friend_id = users.id) or "+
+                                "exists(select 'x' from subscribes s where s.target_id = ? and s.requestor_id = users.id) or "+
+                                "(users.email in (?)))", user.Id, user.Id, listMention).
+                                Where("not exists(select 'x' from blocks b where b.requestor_id = ? and b.target_id = users.id)", user.Id).
+                                Find(&amp;followers)
+
+                        for _, follower := range followers </span><span class="cov8" title="1">{
+                                listEmailSent = append(listEmailSent, follower.Email)
+                        }</span>
+
+                        <span class="cov8" title="1">if len(listEmailSent) &gt; 0 </span><span class="cov8" title="1">{
+                                userMessage := models.Message{}
+                                userMessage.SenderId = user.Id
+                                userMessage.Text = param.Text
+                                userMessage.CreatedAt = time.Now()
+                                userMessage.UpdatedAt = time.Now()
+                                if err := this.DB.Create(&amp;userMessage).Error; err != nil </span><span class="cov0" title="0">{
+                                        returnStatus, success = helper.UndefinedErrorMessage(err.Error(), &amp;messages)
+                                }</span>
+
+                                <span class="cov8" title="1">if success </span><span class="cov8" title="1">{
+                                        ctx.JSON(iris.Map{
+                                                "success":    true,
+                                                "recipients": listEmailSent,
+                                        })
+                                        return
+                                }</span>
+                        }<span class="cov8" title="1"> else {
+                                returnStatus, success = helper.RecordNotFoundMessage("Follower/mention", &amp;messages)
+                        }</span>
+                }
+        }
+
+        <span class="cov8" title="1">ctx.StatusCode(returnStatus)
+        ctx.JSON(iris.Map{
+                "message": messages,
+                "success": success,
+        })</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package message
+
+import (
+        "github.com/kataras/iris"
+        "github.com/jinzhu/gorm"
+)
+
+type Routes struct {
+        DB           *gorm.DB
+        RoutesPrefix string
+}
+
+// Handle api routing for sending message
+func (this *Routes) Handler(app *iris.Application) <span class="cov8" title="1">{
+        controller := Controller{DB: this.DB}
+        api := app.Party(this.RoutesPrefix + "/message")
+        </span><span class="cov8" title="1">{
+                api.Post("/", controller.Create)
+        }</span>
+}
+</pre>
+		
+		</div>
+	
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+
+</body></html>

@@ -1,0 +1,4 @@
+mode: set
+social-api\apps\controller\landing\landing_routes.go:14.52,17.2 3 1
+social-api\apps\controller\landing\landing_routes.go:17.2,19.3 1 1
+social-api\apps\controller\landing\landing_controller.go:14.49,16.2 1 1
