@@ -124,6 +124,44 @@ For running this application locally, you can use docker, simply run on the go p
 
     docker-compose docker-compose up -d --build
 
+After docker build is finished wait about 5-15 minutes for waiting go updating its dependencies depending you internet connection. Run bellow command to view go dependency installation:
 
+    docker-compose logs -f social-api
+    
+Before you can view the application on your browser (http://localhost:8383) wait until you see:
+
+    test-social-api  | [00] Now listening on: http://localhost:8080
+    test-social-api  | [00] Application started. Press CTRL+C to shut down.
+
+Then press ctrl+c to close to logs view
+
+
+### Troubleshot
+If you see something like: 
+
+    test-social-api  | [00] main.go:10:2: cannot find package "github.com/joho/godotenv" in any of:
+    test-social-api  | [00]         /go/src/social-api/vendor/github.com/joho/godotenv (vendor tree)
+    test-social-api  | [00]         /usr/local/go/src/github.com/joho/godotenv (from $GOROOT)
+    test-social-api  | [00]         /go/src/github.com/joho/godotenv (from $GOPATH)
+
+It means the dependency loader is failed to fetch all the dependency, you can manualy load the dependency by connecting to bash and execute glide
+
+    1. Access to application container bash
+        windows:
+        winpty docker exec -it test-social-api bash
+        
+        unix:
+        docker exec -it test-social-api bash
+        
+    2. Make sure you are on the application folder (/go/src/social-api)
+    
+    3. Run glide
+        glide install
+        
+    4. Wait until the process is finished
+    
+    5. Restart docker
+    
+    
 # Unit Test Result
 ![N|Solid](http://image.ibb.co/j7Rysb/image.png)
