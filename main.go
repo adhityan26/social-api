@@ -8,10 +8,13 @@ import (
 	"social-api/apps/models"
 	"social-api/apps/helper"
 	"github.com/joho/godotenv"
+	"fmt"
 )
 
 func main() {
 	godotenv.Load()
+	fmt.Println("Starting API with host: "+os.Getenv("HOST")+":"+os.Getenv("PORT"))
+	fmt.Println("API Version: "+os.Getenv("API_VERSION"))
 
 	db := helper.SetupDB()
 
