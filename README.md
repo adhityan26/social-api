@@ -66,6 +66,17 @@ Create new user connection
                 string
             ]
         }
+        
+* **[Delete]** /api/v1/connection
+Delete user connection
+
+        json param:
+        {
+            "friends": [
+                string,
+                string
+            ]
+        }
 
 * **[Post]** /api/v1/connection/show
 View user friend list

@@ -9,6 +9,7 @@ import (
 	"social-api/apps/models"
 	"time"
 	"social-api/apps/helper"
+	"net/http"
 )
 
 type Controller struct {
@@ -70,7 +71,7 @@ func (this *Controller) Index(ctx iris.Context) {
 
 // Create connection between two email address
 func (this *Controller) Create(ctx iris.Context) {
-	var returnStatus, success = 200, true
+	var returnStatus, success = http.StatusOK, true
 	var messages = []string{}
 
 	param := connectionOutput{}
@@ -132,24 +133,22 @@ func (this *Controller) Create(ctx iris.Context) {
 
 				if checkFriendModel1.RecordNotFound() && checkFriendModel2.RecordNotFound() {
 					tx := this.DB.Begin()
-					userConnection1 := models.Connection{}
-					userConnection1.UserId = user1.Id
-					userConnection1.FriendId = user2.Id
-					userConnection1.CreatedAt = time.Now()
-					userConnection1.UpdatedAt = time.Now()
-					if err := tx.Create(&userConnection1).Error; err != nil {
-						returnStatus, success = helper.UndefinedErrorMessage(err.Error(), &messages)
-					}
+					newConnection := make(chan map[int]bool)
 
-					if success {
-						userConnection2 := models.Connection{}
-						userConnection2.UserId = user2.Id
-						userConnection2.FriendId = user1.Id
-						userConnection2.CreatedAt = time.Now()
-						userConnection2.UpdatedAt = time.Now()
-						if err := tx.Create(&userConnection2).Error; err != nil {
-							returnStatus, success = helper.UndefinedErrorMessage(err.Error(), &messages)
+					go (&Controller{DB: tx}).
+						CreateConnection(user1, user2, messages, newConnection)
+
+					go (&Controller{DB: tx}).
+						CreateConnection(user2, user1, messages, newConnection)
+
+					new, ok := <-newConnection
+					for !ok {
+						for r, s := range new {
+							if !s {
+								returnStatus, success = r, s
+							}
 						}
+						new, ok = <-newConnection
 					}
 
 					if success {
@@ -180,6 +179,127 @@ func (this *Controller) Create(ctx iris.Context) {
 		"messages": messages,
 		"success":  success,
 	})
+}
+
+func (this *Controller) CreateConnection(user1 models.User, user2 models.User, messages []string, connection chan map[int]bool) {
+	userConnection := models.Connection{}
+	userConnection.UserId = user1.Id
+	userConnection.FriendId = user2.Id
+	userConnection.CreatedAt = time.Now()
+	userConnection.UpdatedAt = time.Now()
+	if err := this.DB.Create(&userConnection).Error; err != nil {
+		r, s := helper.UndefinedErrorMessage(err.Error(), &messages)
+		connection <- map[int]bool {
+			r: s,
+		}
+	} else {
+		connection <- map[int]bool {
+			http.StatusOK: false,
+		}
+	}
+}
+
+// Remove connection between two email address
+func (this *Controller) Remove(ctx iris.Context) {
+	var returnStatus, success = http.StatusOK, true
+	var messages = []string{}
+
+	param := connectionOutput{}
+	ctx.ReadJSON(&param)
+
+	if len(param.Friends) < 2 {
+		returnStatus, success = helper.CustomPreconditionRequiredErrorMessage("Must provide 2 email", &messages)
+	}
+
+	if (len(param.Friends) == 2) && (param.Friends[0] == param.Friends[1]) {
+		returnStatus, success = helper.CustomPreconditionErrorMessage("Email cannot be the same", &messages)
+	}
+
+	if len(param.Friends) > 0 && helper.ValidateEMail(param.Friends[0]) && len(param.Friends[0]) > 0 {
+		returnStatus, success = helper.InvalidFormatMessage("Email 1", "email(mail@domain.com)", &messages)
+	}
+
+	if len(param.Friends) > 1 && helper.ValidateEMail(param.Friends[1]) && len(param.Friends[1]) > 0 {
+		returnStatus, success = helper.InvalidFormatMessage("Email 2", "email(mail@domain.com)", &messages)
+	}
+
+	if success {
+		var user1 = models.User{}
+		userModel1 := this.DB.Where("email = ?", param.Friends[0]).First(&user1)
+		var user2 = models.User{}
+		userModel2 := this.DB.Where("email = ?", param.Friends[1]).First(&user2)
+
+		if userModel1.RecordNotFound() {
+			returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Friends[0]), &messages)
+		}
+
+		if userModel2.RecordNotFound() {
+			returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Friends[1]), &messages)
+		}
+
+		if success {
+			tx := this.DB.Begin()
+			var checkFriend1 models.Connection
+			friendConnection1 := tx.
+				Where("user_id = ?", user1.Id).
+				Where("friend_id = ?", user2.Id).
+				First(&checkFriend1)
+
+			var checkFriend2 models.Connection
+			friendConnection2 := tx.
+				Where("user_id = ?", user2.Id).
+				Where("friend_id = ?", user1.Id).
+				First(&checkFriend2)
+
+			if !friendConnection1.RecordNotFound() && !friendConnection2.RecordNotFound() {
+				delConnection := make(chan map[int]bool)
+
+				go (&Controller{DB: friendConnection1}).RemoveConnection(messages, delConnection)
+				go (&Controller{DB: friendConnection2}).RemoveConnection(messages, delConnection)
+
+				del, ok := <-delConnection
+				for !ok {
+					for r, s := range del {
+						if !s {
+							returnStatus, success = r, s
+						}
+					}
+					del, ok = <-delConnection
+				}
+
+				if success {
+					tx.Commit()
+					ctx.JSON(iris.Map{
+						"success": true,
+					})
+					return
+				} else {
+					tx.Rollback()
+				}
+			} else {
+				returnStatus, success = helper.CustomPreconditionErrorMessage(fmt.Sprintf("Email %s and %s is not a friend", param.Friends[0], param.Friends[1]), &messages)
+			}
+		}
+	}
+
+	ctx.StatusCode(returnStatus)
+	ctx.JSON(iris.Map{
+		"messages": messages,
+		"success":  success,
+	})
+}
+
+func (this *Controller) RemoveConnection(messages []string, connection chan map[int]bool) {
+	if err := this.DB.Delete(&models.Connection{}).Error; err != nil {
+		r, s := helper.UndefinedErrorMessage(err.Error(), &messages)
+		connection <- map[int]bool{
+			r: s,
+		}
+	} else {
+		connection <- map[int]bool{
+			http.StatusOK: true,
+		}
+	}
 }
 
 // view common friend between teo emil address

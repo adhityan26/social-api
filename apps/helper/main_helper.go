@@ -9,10 +9,10 @@ import (
 )
 
 func SetupDB() *gorm.DB {
-	conn := Getenv("USERNAME_DB", "api") + ":" +
+	conn := Getenv("USERNAME_DB", "root") + ":" +
 		Getenv("PASSWORD_DB", "") + "@tcp(" +
 		Getenv("DATABASE_HOST", "localhost") + ":" +
-		Getenv("DATABASE_PORT", "3336") + ")/" +
+		Getenv("DATABASE_PORT", "3306") + ")/" +
 		Getenv("DATABASE_NAME", "social-api") + "?charset=utf8&parseTime=True&loc=Local"
 
 	db, err := gorm.Open(Getenv("DATABASE_TYPE", "mysql"), conn)
