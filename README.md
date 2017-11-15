@@ -1,4 +1,6 @@
 # Social API
+For demo open:
+[Social API](ant-social-api.herokuapp.com "Social API on Heroku")
 
 # Features
 * Manage user
@@ -20,146 +22,472 @@ This API is written in GO Lang 1.9 and uses:
 ### User
 This module is for handling user management
 * **[Get]** /api/v1/user
-Get user list
 
-        param uri:
-            name: string [wildcard]
-            email: string [wildcard]
-            status: int [0|1]
+  Get user list
+    * request
+
+            uri query param:
+                name: string [wildcard],
+                email: string [wildcard],
+                status: int [0|1]
+                
+    * response success
+    
+            json:
+            {
+                "user: [user list],
+                "success": true
+            }
+            response code:
+                200
+    
+    * response error
+            
+            json:
+            {
+                "message": failure message
+                "success": false
+            }
+            response code:
+                404 -> user not found
 
 * **[Post]** /api/v1/user
-Create new user
 
-        json param:
-        {
-            "name": string
-            "email": string
-        }
+  Create new user
+
+    * request
+    
+            json param:
+            {
+                "name": string,
+                "email": string
+            }
+            
+    * response success
+    
+            json:
+            {
+                "user": inserted user value,
+                "success": true,
+                "message": success message                
+            }
+            response code:
+                200
+        
+    * response error
+    
+            json:
+            {
+                "success": false,
+                "message": failure message                
+            }
+            response code:
+                409 -> duplicate data found
+                412 -> invalid format
+                428 -> mandatory field not present
+                500 -> internal system error
+                
 
 * **[Put]** /api/v1/user/{id}
-Update existing user
 
-        path param:
-            {id}: int
+  Update existing user
+  
+    * request
 
-        json param:
-        {
-            "name": string
-            "email": string
-            "status": int [0/1]
-        }
+            path param:
+                {id}: int
+    
+            json param:
+            {
+                "name": string
+                "email": string
+                "status": int [0/1]
+            }
+            
+    * response success
+    
+            json:
+            {
+                "user": updated user value,
+                "success": true,
+                "message": success message                
+            }
+            response code:
+                200
+            
+    * response error
+    
+            json:
+            {
+                "success": false,
+                "message": failure message                
+            }
+            response code:
+                404 -> user not found
+                412 -> invalid format
+                428 -> mandatory field not present
+                500 -> internal system error
 
 * **[Delete]** /api/v1/user/{id}
-Delete existing user
 
-        path param:
-            {id}: int
+  Delete existing user
+    
+    * request
+    
+            path param:
+                {id}: int
+            
+    * response success
+    
+            json:
+            {
+                "success": true,
+                "message": success message                
+            }
+            response code:
+                200
+            
+    * response error
+    
+            json:
+            {
+                "success": false,
+                "message": failure message                
+            }
+            response code:
+                404 -> user not found
+                412 -> invalid format
+                500 -> internal system error
 
 ### Connection
 This module is for handling user connection
 * **[Post]** /api/v1/connection
-Create new user connection
 
-        json param:
-        {
-            "friends": [
-                string,
-                string
-            ]
-        }
+  Create new user connection
+  
+    * request
+
+            json param:
+            {
+                "friends": [
+                    string,
+                    string
+                ]
+            }
+            
+    * response success
+    
+            json:
+            {
+                "success": true            
+            }
+            response code:
+                200
         
+    * response error
+    
+            json:
+            {
+                "success": false,
+                "message": failure message                
+            }
+            response code:
+                409 -> duplicate data found
+                412 -> invalid format
+                428 -> mandatory field not present
+                500 -> internal system error
+                
 * **[Delete]** /api/v1/connection
-Delete user connection
 
-        json param:
-        {
-            "friends": [
-                string,
-                string
-            ]
-        }
+  Delete user connection
+  
+    * request
 
+            json param:
+            {
+                "friends": [
+                    string,
+                    string
+                ]
+            }
+                    
+    * response success
+    
+            json:
+            {
+                "success": true            
+            }
+            response code:
+                200
+        
+    * response error
+    
+            json:
+            {
+                "success": false,
+                "message": failure message                
+            }
+            response code:
+                404 -> user not found
+                412 -> invalid format
+                500 -> internal system error
+                
 * **[Post]** /api/v1/connection/show
-View user friend list
 
-        json param:
-        {
-            "email": string
-        }
+  View user friend list
+  
+    * request
+
+            json param:
+            {
+                "email": string
+            }
+            
+    * response success
+    
+            json:
+            {
+                "count": total user friend
+                "friends": list of user friend
+                "success": true            
+            }
+            response code:
+                200
+        
+    * response error
+    
+            json:
+            {
+                "success": false,
+                "message": failure message                
+            }
+            response code:
+                412 -> invalid format
+                428 -> mandatory field not present
+                500 -> internal system error
+                
 
 * **[Post]** /api/v1/connection/common
-View common friend between 2 users
 
-        json param:
-        {
-            "friends": [
-                string,
-                string
-            ]
-        }
+  View common friend between 2 users
+  
+    * request
 
+            json param:
+            {
+                "friends": [
+                    string,
+                    string
+                ]
+            }
+            
+    * response success
+    
+            json:
+            {
+                "count": total user friend
+                "friends": list of user friend
+                "success": true            
+            }
+            response code:
+                200
+        
+    * response error
+    
+            json:
+            {
+                "success": false,
+                "message": failure message                
+            }
+            response code:
+                404 -> user not found
+                412 -> invalid format
+                428 -> mandatory field not present
+                500 -> internal system error
+                
 ### Subscribe
 This module is for handling user subscription
 * **[Post]** /api/v1/subscribe
-Create new subscription from a requestor user to target user
 
-        json param:
-        {
-            "requestor": string,
-            "target": string
-        }
+  Create new subscription from a requestor user to target user
+  
+    * request
+
+            json param:
+            {
+                "requestor": string,
+                "target": string
+            }
+            
+    * response success
+    
+            json:
+            {
+                "success": true            
+            }
+            response code:
+                200
+        
+    * response error
+    
+            json:
+            {
+                "success": false,
+                "message": failure message                
+            }
+            response code:
+                409 -> duplicate data found
+                412 -> invalid format
+                428 -> mandatory field not present
+                500 -> internal system error
         
 * **[Delete]** /api/v1/subscribe
-Remove subscription from a requestor user to target user
 
-        json param:
-        {
-            "requestor": string,
-            "target": string
-        }
+  Remove subscription from a requestor user to target user
+  
+    * request
+
+            json param:
+            {
+                "requestor": string,
+                "target": string
+            }
+                    
+    * response success
+    
+            json:
+            {
+                "success": true            
+            }
+            response code:
+                200
+        
+    * response error
+    
+            json:
+            {
+                "success": false,
+                "message": failure message                
+            }
+            response code:
+                404 -> user not found
+                412 -> invalid format
+                500 -> internal system error
 
 ### Block
 This module is for handling user block
 * **[Post]** /api/v1/block
-Block user update and friend connection from a requestor to target user
 
+  Block user update and friend connection from a requestor to target user
+  
+    * request
 
-    json param:
-    {
-        "requestor": string,
-        "target": string
-    }
+            json param:
+            {
+                "requestor": string,
+                "target": string
+            }
+            
+    * response success
     
+            json:
+            {
+                "success": true            
+            }
+            response code:
+                200
+        
+    * response error
+    
+            json:
+            {
+                "success": false,
+                "message": failure message                
+            }
+            response code:
+                409 -> duplicate data found
+                412 -> invalid format
+                428 -> mandatory field not present
+                500 -> internal system error    
     
 * **[Delete]** /api/v1/block
-Unblock user update and friend connection from a requestor to target user
 
+  Unblock user update and friend connection from a requestor to target user
+ 
+    * request
 
-    json param:
-    {
-        "requestor": string,
-        "target": string
-    }
-
+            json param:
+            {
+                "requestor": string,
+                "target": string
+            }
+                    
+    * response success
+    
+            json:
+            {
+                "success": true            
+            }
+            response code:
+                200
+        
+    * response error
+    
+            json:
+            {
+                "success": false,
+                "message": failure message                
+            }
+            response code:
+                404 -> user not found
+                412 -> invalid format
+                500 -> internal system error
+        
 ### Message
 This module is for handling user updates
 * **[Post]** /api/v1/message
-Send update from a user to list followers
 
-        json param:
-        {
-            "sender": string,
-            "text": string
-        }
+  Send update from a user to list followers
+ 
+    * request
+
+            json param:
+            {
+                "sender": string,
+                "text": string
+            }
+            
+    * response success
+    
+            json:
+            {
+                "success": true,
+                "recipients": list of user that can receive update
+            }
+            response code:
+                200
+        
+    * response error
+    
+            json:
+            {
+                "success": false,
+                "message": failure message                
+            }
+            response code:
+                404 -> user not found
+                412 -> invalid format
+                428 -> mandatory field not present
+                500 -> internal system error
 
 # Installation
 For running this application locally, you can use docker, simply run on the go project folder:
 
-    docker-compose docker-compose up -d --build
+    $ docker-compose docker-compose up -d --build
 
 After docker build is finished wait about 5-15 minutes for waiting go updating its dependencies depending you internet connection. Run bellow command to view go dependency installation:
 
-    docker-compose logs -f social-api
+    $ docker-compose logs -f social-api
     
 Before you can view the application on your browser (http://localhost:8383) wait until you see:
 
@@ -181,20 +509,20 @@ It means the dependency loader is failed to fetch all the dependency, you can ma
 
     1. Access to application container bash
         windows:
-        winpty docker exec -it test-social-api bash
+        $ winpty docker exec -it test-social-api bash
         
         unix:
-        docker exec -it test-social-api bash
+        $ docker exec -it test-social-api bash
         
-    2. Make sure you are on the application folder (/go/src/social-api)
+    2. Make sure you are on the go application folder (/go/src/social-api)
     
-    3. Run glide
-        glide install
+    3. Run glide install
+        $ glide install
         
     4. Wait until the process is finished
     
     5. Restart docker
-        docker-compose restart social-api
+        $ docker-compose restart social-api
     
     
 # Unit Test Result
