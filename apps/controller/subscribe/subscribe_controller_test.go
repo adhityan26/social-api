@@ -94,6 +94,22 @@ func TestCreateSubscription(t *testing.T) {
 		WithJSON(iris.Map{"requestor": "a@a.com", "target": "a@b.com"}).
 		Expect().Body().Contains("\"success\":false")
 
+	e.DELETE(server.RoutePrefix + "/subscribe").
+		WithJSON(iris.Map{"requestor": "aaa", "target": "bbb"}).
+		Expect().Body().Contains("\"success\":false")
+
+	e.DELETE(server.RoutePrefix + "/subscribe").
+		WithJSON(iris.Map{"requestor": "a@a.com", "target": "a@b.com"}).
+		Expect().Body().Contains("\"success\":false")
+
+	e.DELETE(server.RoutePrefix + "/subscribe").
+		WithJSON(iris.Map{"requestor": userList[0].Email, "target": userList[1].Email}).
+		Expect().Body().Contains("\"success\":true")
+
+	e.DELETE(server.RoutePrefix + "/subscribe").
+		WithJSON(iris.Map{"requestor": userList[0].Email, "target": userList[1].Email}).
+		Expect().Body().Contains("\"success\":false")
+
 	//remove test data
 	for _, us := range userList {
 		server.DB.Delete(models.User{}, us.Id)

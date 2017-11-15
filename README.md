@@ -96,6 +96,15 @@ Create new subscription from a requestor user to target user
             "requestor": string,
             "target": string
         }
+        
+* **[Post]** /api/v1/unsubscribe
+Remove subscription from a requestor user to target user
+
+        json param:
+        {
+            "requestor": string,
+            "target": string
+        }
 
 ### Block
 This module is for handling user block

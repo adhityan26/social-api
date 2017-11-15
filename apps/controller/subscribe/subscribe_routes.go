@@ -16,5 +16,6 @@ func (this *Routes) Handler(app *iris.Application) {
 	api := app.Party(this.RoutesPrefix + "/subscribe")
 	{
 		api.Post("/", controller.Create)
+		api.Delete("/", controller.Remove)
 	}
 }

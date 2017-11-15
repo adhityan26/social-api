@@ -110,3 +110,78 @@ func (this *Controller) Create(ctx iris.Context) {
 		"success": success,
 	})
 }
+
+// unsubscribe user for no longer receive user updates
+func (this *Controller) Remove(ctx iris.Context) {
+	var returnStatus, success = 200, true
+	var messages = []string{}
+
+	param := subscribeOutput{}
+	ctx.ReadJSON(&param)
+
+	if len(param.Requestor) == 0 {
+		returnStatus, success = helper.MandatoryErrorMessage("Requestor", &messages)
+	}
+
+	if len(param.Target) == 0 {
+		returnStatus, success = helper.MandatoryErrorMessage("Target", &messages)
+	}
+
+	if helper.ValidateEMail(param.Requestor) && len(param.Requestor) > 0 {
+		returnStatus, success = helper.InvalidFormatMessage("Requestor", "email(mail@domain.com)", &messages)
+	}
+
+	if helper.ValidateEMail(param.Target) && len(param.Target) > 0 {
+		returnStatus, success = helper.InvalidFormatMessage("Target", "email(mail@domain.com)", &messages)
+	}
+
+	if len(param.Requestor) > 0 && len(param.Target) > 0 && param.Requestor == param.Target {
+		returnStatus, success = helper.CustomPreconditionErrorMessage("Requestor and Target email cannot be the same", &messages)
+	}
+
+	if success {
+		var user1 = models.User{}
+		userModel1 := this.DB.Where("email = ?", param.Requestor).First(&user1)
+		var user2 = models.User{}
+		userModel2 := this.DB.Where("email = ?", param.Target).First(&user2)
+
+		if userModel1.RecordNotFound() {
+			returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Requestor), &messages)
+		}
+
+		if userModel2.RecordNotFound() {
+			returnStatus, success = helper.RecordNotFoundMessage(fmt.Sprintf("Email %s", param.Target), &messages)
+		}
+
+		if success {
+			var checkSubscribe models.Subscribe
+			subscribeData := this.DB.
+				Where("requestor_id = ?", user1.Id).
+				Where("target_id = ?", user2.Id).
+				First(&checkSubscribe)
+
+			if !subscribeData.RecordNotFound() {
+				if success {
+					if err := subscribeData.Delete(&models.Subscribe{}).Error; err != nil {
+						returnStatus, success = helper.UndefinedErrorMessage(err.Error(), &messages)
+					}
+
+					if success {
+						ctx.JSON(iris.Map{
+							"success": true,
+						})
+						return
+					}
+				}
+			} else {
+				returnStatus, success = helper.CustomPreconditionErrorMessage(fmt.Sprintf("Email %s is not subscribe to %s", param.Requestor, param.Target), &messages)
+			}
+		}
+	}
+
+	ctx.StatusCode(returnStatus)
+	ctx.JSON(iris.Map{
+		"messages": messages,
+		"success": success,
+	})
+}
