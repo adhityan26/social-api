@@ -1,7 +1,4 @@
 package: social-api
-ignore:
-- models
-- controllers
 import:
 - package: github.com/kataras/iris
 - package: github.com/joho/godotenv

@@ -10,7 +10,7 @@ import (
 
 func SetupDB() *gorm.DB {
 	conn := Getenv("USERNAME_DB", "api") + ":" +
-		Getenv("PASSWORD_DB", "api") + "@tcp(" +
+		Getenv("PASSWORD_DB", "") + "@tcp(" +
 		Getenv("DATABASE_HOST", "localhost") + ":" +
 		Getenv("DATABASE_PORT", "3336") + ")/" +
 		Getenv("DATABASE_NAME", "social-api") + "?charset=utf8&parseTime=True&loc=Local"
