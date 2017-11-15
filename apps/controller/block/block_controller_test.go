@@ -98,7 +98,6 @@ func TestBlockUser(t *testing.T) {
 		WithJSON(iris.Map{"requestor": "aaa", "target": "aaa"}).
 		Expect().Body().Contains("\"success\":false")
 
-
 	e.POST(server.RoutePrefix + "/block").
 		WithJSON(iris.Map{"requestor": "a@a.com", "target": "a@b.com"}).
 		Expect().Body().Contains("\"success\":false")
@@ -126,6 +125,25 @@ func TestBlockUser(t *testing.T) {
 	e.POST(server.RoutePrefix + "/subscribe").
 		WithJSON(iris.Map{"requestor": userList[0].Email, "target": userList[1].Email}).
 		Expect().Body().Contains("\"success\":true")
+
+	e.DELETE(server.RoutePrefix + "/block").
+		WithJSON(iris.Map{"requestor": userList[0].Email, "target": userList[1].Email}).
+		Expect().Body().Contains("\"success\":true")
+
+	e.DELETE(server.RoutePrefix + "/block").
+		WithJSON(iris.Map{"requestor": "a@a.com", "target": "a@a.com"}).
+		Expect().Body().Contains("\"success\":false")
+
+	e.DELETE(server.RoutePrefix + "/block").
+		WithJSON(iris.Map{"requestor": "a@a.com", "target": "b@b.com"}).
+		Expect().Body().Contains("\"success\":false")
+
+	e.DELETE(server.RoutePrefix + "/block").
+		WithJSON(iris.Map{"requestor": "aaa", "target": "aaa"}).
+		Expect().Body().Contains("\"success\":false")
+
+	e.DELETE(server.RoutePrefix + "/block").
+		Expect().Body().Contains("\"success\":false")
 
 	//remove test data
 	for _, us := range userList {

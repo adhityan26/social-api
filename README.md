@@ -2,17 +2,18 @@
 
 # Features
 * Manage user
-* Manage user connection
-* Block user update
+* Connect/remove remove friend connection user
+* Subscribe/unsubscribe user update
+* Block/unblock user update
 * View list user message update
 
 ## Component
 This API is written in GO Lang 1.9 and uses:
-* Go, Go is an open source programming language that makes it easy to build simple, reliable, and efficient software.
-* Iris, Iris is a fast, simple and efficient web framework for Go. Iris provides a beautifully expressive and easy to use foundation for your next website, API, or distributed app.
+* Go, is an open source programming language that makes it easy to build simple, reliable, and efficient software.
+* Iris, is a fast, simple and efficient web framework for Go. Iris provides a beautifully expressive and easy to use foundation for your next website, API, or distributed app.
 * Glide, Is Vendor Package Management for Golang. Glide is a tool for managing the vendor directory within a Go package.
-* MySQL, MySQL is a freely available open source Relational Database Management System (RDBMS) that uses Structured Query Language (SQL)
-* Docker, Docker is an open platform for developers and sysadmins to build, ship, and run distributed applications, whether on laptops, data center VMs, or the cloud.
+* MySQL, is a freely available open source Relational Database Management System (RDBMS) that uses Structured Query Language (SQL)
+* Docker, is an open platform for developers and sysadmins to build, ship, and run distributed applications, whether on laptops, data center VMs, or the cloud.
 
 # API routes
 
@@ -108,7 +109,7 @@ Create new subscription from a requestor user to target user
             "target": string
         }
         
-* **[Post]** /api/v1/unsubscribe
+* **[Delete]** /api/v1/subscribe
 Remove subscription from a requestor user to target user
 
         json param:
@@ -121,6 +122,18 @@ Remove subscription from a requestor user to target user
 This module is for handling user block
 * **[Post]** /api/v1/block
 Block user update and friend connection from a requestor to target user
+
+
+    json param:
+    {
+        "requestor": string,
+        "target": string
+    }
+    
+    
+* **[Delete]** /api/v1/block
+Unblock user update and friend connection from a requestor to target user
+
 
     json param:
     {
@@ -181,6 +194,7 @@ It means the dependency loader is failed to fetch all the dependency, you can ma
     4. Wait until the process is finished
     
     5. Restart docker
+        docker-compose restart social-api
     
     
 # Unit Test Result
