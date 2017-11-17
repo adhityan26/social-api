@@ -1,6 +1,7 @@
 # Social API
-For demo open:
-[Social API](ant-social-api.herokuapp.com "Social API on Heroku")
+For demo visit:
+[Social API](http://ant-social-api.herokuapp.com "Social API on Heroku")
+http://ant-social-api.herokuapp.com
 
 # Features
 * Manage user
